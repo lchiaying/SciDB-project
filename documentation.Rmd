@@ -1,0 +1,29 @@
+---
+title: "SciDB"
+author: "Wusuo Liu and Chia Ying Lee"
+date: "5/3/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Installation
+
+Download the virtual machine from <insert Google Docs URL>.
+
+# Data
+
+We use the movie ratings data from [MovieLens](https://grouplens.org/datasets/movielens/)
+
+
+```{r}
+# Get the small dataset
+data.dir <- "ml-20m"
+if (!dir.exists(data.dir)) {
+  download.file("http://files.grouplens.org/datasets/movielens/ml-latest-small.zip", 
+                destfile = "ml-20m.zip")
+  unzip("ml-20m.zip")
+}
+```
