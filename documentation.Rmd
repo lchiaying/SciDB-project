@@ -15,12 +15,12 @@ Download the virtual machine from <insert Google Docs URL>.
 
 # Data
 
-We use the movie ratings data from [MovieLens](https://grouplens.org/datasets/movielens/)
+We use the movie ratings data from [MovieLens](https://grouplens.org/datasets/movielens/).
 
 
 ```{r}
 # Get the small dataset
-data.dir <- "ml-20m"
+data.dir <- "ml-latest-small"
 if (!dir.exists(data.dir)) {
   download.file("http://files.grouplens.org/datasets/movielens/ml-latest-small.zip", 
                 destfile = "ml-20m.zip")

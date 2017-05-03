@@ -129,9 +129,9 @@ $(document).ready(function () {
 </div>
 <div id="data" class="section level1">
 <h1>Data</h1>
-<p>We use the movie ratings data from <a href="https://grouplens.org/datasets/movielens/">MovieLens</a></p>
+<p>We use the movie ratings data from <a href="https://grouplens.org/datasets/movielens/">MovieLens</a>.</p>
 <pre class="r"><code># Get the small dataset
-data.dir &lt;- &quot;ml-20m&quot;
+data.dir &lt;- &quot;ml-latest-small&quot;
 if (!dir.exists(data.dir)) {
   download.file(&quot;http://files.grouplens.org/datasets/movielens/ml-latest-small.zip&quot;, 
                 destfile = &quot;ml-20m.zip&quot;)
