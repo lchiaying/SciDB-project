@@ -13,7 +13,12 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Download the virtual machine from <insert Google Docs URL>.
 
+Full documentation is provided [here](https://paradigm4.atlassian.net/wiki/display/ESD/SciDB+Documentation).
+
+
 # Data
+
+## Download data
 
 We use the movie ratings data from [MovieLens](https://grouplens.org/datasets/movielens/).
 
@@ -27,3 +32,31 @@ if (!dir.exists(data.dir)) {
   unzip("ml-20m.zip")
 }
 ```
+
+
+## Load Data into R
+
+```{r}
+library(scidb, quietly = T)
+library(data.table, quietly = T)
+library(Matrix, quietly = T)
+
+scidbconnect()
+ratings <- read.csv("ml-latest-small/ratings.csv")
+ratings <- as.scidb(ratings[,-4]) # gives error
+```
+
+```{r}
+links <- read.csv("ml-latest-small/links.csv")
+links <- as.scidb(links) # OK
+```
+
+
+```{r}
+mat <- scidb("mat")
+
+source("vm_functions.R")
+image(mat, grid = c(10,10)) -> Im
+```
+
+
