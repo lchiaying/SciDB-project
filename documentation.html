@@ -126,9 +126,58 @@ $(document).ready(function () {
 <div id="installation" class="section level1">
 <h1>Installation</h1>
 <p>Download the virtual machine from <insert Google Docs URL>.</p>
+<p>Full documentation of SciDB is provided <a href="https://paradigm4.atlassian.net/wiki/display/ESD/SciDB+Documentation">here</a>.</p>
+<p>The <code>scidb</code> R package is available on <a href="https://cran.r-project.org/package=scidb">CRAN</a>, along with <a href="https://cran.r-project.org/web/packages/scidb/vignettes/scidb.pdf">documentation</a>.</p>
+<p>The virtual machine has R and RStudio server already set up with <code>scidb</code> R package installed. (Note the pre-installed version of <code>scidb</code> is not the latest version.)</p>
+</div>
+<div id="scidb-query" class="section level1">
+<h1>SciDB query</h1>
+<p>Uses the AFL query language blah blah blah.</p>
+</div>
+<div id="basics-of-scidb-r-package" class="section level1">
+<h1>Basics of SciDB R package</h1>
+<p>First, load the library, and connect to the SciDB database.</p>
+<pre class="r"><code>library(scidb, quietly = T)</code></pre>
+<pre><code>##    ____    _ ___  ___
+##   / __/___(_) _ \/ _ )
+##  _\ \/ __/ / // / _  |
+## /___/\__/_/____/____/     Copyright 2016, Paradigm4, Inc.</code></pre>
+<pre><code>## 
+## Attaching package: 'scidb'</code></pre>
+<pre><code>## The following objects are masked from 'package:stats':
+## 
+##     phyper, qhyper</code></pre>
+<pre class="r"><code>scidbconnect()</code></pre>
+<p>The VM’s SciDB database already contains several datasets. We can list them.</p>
+<pre class="r"><code>scidblist()</code></pre>
+<pre><code>##  [1] &quot;foo&quot;                  &quot;IHI_ACCELEROMETER&quot;    &quot;IHI_ACTIVITY&quot;        
+##  [4] &quot;IHI_LIGHT&quot;            &quot;IHI_SLEEP_PREDICTION&quot; &quot;KG_POPULATION&quot;       
+##  [7] &quot;KG_VAR_SVD&quot;           &quot;MODIS_DATA&quot;           &quot;MODIS_PLACES&quot;        
+## [10] &quot;test&quot;</code></pre>
+<p>To build a new dataset in the database, we use the <code>build</code> function to create an AFL query expression, then <code>scidbeval</code> to evaluate it into an actual SciDB data object.</p>
+<p>As an example, we create a sparse matrix as follows:</p>
+<pre class="r"><code>x &lt;- build(&quot;&lt;v:double&gt;[i=1:2,2,0, j=1:3,1,0], i*j)&quot;, dim = c(3,4))
+scidbeval(x, name = &quot;test&quot;) # Give the dataset a meaningful name</code></pre>
+<pre><code>## SciDB expression  test
+## SciDB schema  &lt;val:string&gt; [i=0:2,1000,0,j=0:3,1000,0] 
+##   variable dimension   type nullable start end chunk
+## 1        i      TRUE  int64    FALSE     0   2  1000
+## 2        j      TRUE  int64    FALSE     0   3  1000
+## 3      val     FALSE string     TRUE</code></pre>
+<p>Now the matrix is in the SciDB database. Let’s load it into R as a <code>scidb</code> object.</p>
+<pre class="r"><code>x.scidb &lt;- scidb(&quot;test&quot;) # Retrieve the dataset by its name
+print(x.scidb)</code></pre>
+<pre><code>## SciDB expression  test
+## SciDB schema  &lt;val:string&gt; [i=0:2,1000,0,j=0:3,1000,0] 
+##   variable dimension   type nullable start end chunk
+## 1        i      TRUE  int64    FALSE     0   2  1000
+## 2        j      TRUE  int64    FALSE     0   3  1000
+## 3      val     FALSE string     TRUE</code></pre>
 </div>
 <div id="data" class="section level1">
 <h1>Data</h1>
+<div id="download-data" class="section level2">
+<h2>Download data</h2>
 <p>We use the movie ratings data from <a href="https://grouplens.org/datasets/movielens/">MovieLens</a>.</p>
 <pre class="r"><code># Get the small dataset
 data.dir &lt;- &quot;ml-latest-small&quot;
@@ -137,6 +186,27 @@ if (!dir.exists(data.dir)) {
                 destfile = &quot;ml-20m.zip&quot;)
   unzip(&quot;ml-20m.zip&quot;)
 }</code></pre>
+</div>
+<div id="load-data-into-r" class="section level2">
+<h2>Load Data into R</h2>
+<pre class="r"><code>library(data.table, quietly = T)
+library(Matrix, quietly = T)</code></pre>
+<pre><code>## 
+## Attaching package: 'Matrix'</code></pre>
+<pre><code>## The following object is masked from 'package:scidb':
+## 
+##     unpack</code></pre>
+<pre class="r"><code># ratings &lt;- read.csv(&quot;ml-latest-small/ratings.csv&quot;)
+# ratings &lt;- as.scidb(ratings[,-4]) # gives error
+
+links &lt;- read.csv(&quot;ml-latest-small/links.csv&quot;)
+links &lt;- as.scidb(links) # OK</code></pre>
+<pre><code>## Warning in POST(X, list(id = session)): NAs introduced by coercion</code></pre>
+<pre class="r"><code># mat &lt;- scidb(&quot;mat&quot;)
+# 
+# source(&quot;vm_functions.R&quot;)
+# image(mat, grid = c(10,10)) -&gt; Im</code></pre>
+</div>
 </div>
 
 
