@@ -72,29 +72,65 @@ if (!dir.exists(data.dir)) {
 
 ## Load Data into R
 
-```{r}
-library(data.table, quietly = T)
-library(Matrix, quietly = T)
-
-# ratings <- read.csv("ml-latest-small/ratings.csv")
-# ratings <- as.scidb(ratings[,-4]) # gives error
-
-links <- read.csv("ml-latest-small/links.csv")
-links <- as.scidb(links) # OK
-
 ```
-
-
-```{r}
-# mat <- scidb("mat")
-# 
-# source("vm_functions.R")
-# image(mat, grid = c(10,10)) -> Im
+$ iquery
+AQL% set lang AFL;
+AFL%
 ```
-
 
 ```
 AFL% CREATE ARRAY ratings <userId:int64, movieID:int64, rating:double, timestamp:int64> [i=1:700,1000000,0]
 AFL% load(ratings, '/home/scidb/Project/ml-latest-small/ratings_0.csv', -2, 'csv');
 AFL% store(redimension(ratings, <val:double>[userId=1:*,?,0,movieID=1:*,?,0]), ratings_matrix);
 ```
+
+```{r}
+if ("ratings" %in% scidbls()) iquery("remove(ratings);")
+iquery("CREATE ARRAY ratings <userId:int64, movieID:int64, rating:double NOT NULL, timestamp:int64> [i=1:?,1000000,0];")
+# Note: It's important to make rating column NOT NULL, to enable the use of spgemm later on.
+```
+
+```{r}
+iquery("load(ratings, '/home/scidb/Project/ml-latest-small/ratings_0.csv', -2, 'csv');")
+```
+
+```{r}
+(m_min <- iquery("aggregate(ratings, min(movieID));", return = T))
+(m_max <- iquery("aggregate(ratings, max(movieID));", return = T))
+
+(u_min <- iquery("aggregate(ratings, min(userId));", return = T))
+(u_max <- iquery("aggregate(ratings, max(userId));", return = T))
+
+(n_ratings <- iquery("aggregate(ratings, count(*));", return = T))
+```
+
+The movieIDs range from 1 to 163949. The userIds range from 1 to 671. There are 100004 ratings available. The matrix is huge but very sparse.
+
+Redimension it so that userId is the first dimension (rows) and movieID is the second dimension (columns).
+
+```{r}
+if ("ratings_matrix" %in% scidbls()) iquery("remove(ratings_matrix);")
+iquery("store(redimension(ratings, <rating:double NOT NULL>[userId=1:671,?,0,movieID=1:163949,?,0]), ratings_matrix);")
+```
+
+We can try to visualize the matrix using the `image` function provided in `vm_functions.R`.
+
+```{r}
+source("~/vm_functions.R")
+
+ratings_matrix <- scidb("ratings_matrix")
+system.time(image(ratings_matrix, grid = c(100,10)))
+```
+
+Now, let's try to compute the correlation between users. Since `userId` is in rows, we just have to normalize the rows and matrix multiply $M * M^T$.
+
+```{r}
+# Figure out how to normalize the data first
+
+system.time(corr <- iquery("spgemm(ratings_matrix, transpose(ratings_matrix));", 
+                           return = T))
+
+head(corr)
+```
+
+

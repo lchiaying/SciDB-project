@@ -2,6 +2,10 @@
 *.csv
 *.txt
 
+# temp files
+*~*
+*#*
+
 # zip files
 *.zip
 
