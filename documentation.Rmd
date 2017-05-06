@@ -19,89 +19,108 @@ The `scidb` R package is available on [CRAN](https://cran.r-project.org/package=
 
 The virtual machine has R and RStudio server already set up with `scidb` R package installed. (Note the pre-installed version of `scidb` is not the latest version.)
 
-# SciDB query
 
-Uses the AFL query language blah blah blah.
+![This is a figure](..../.png)
 
-# Basics of SciDB R package
+## Start the database
 
-First, load the library, and connect to the SciDB database.
-```{r}
-library(scidb, quietly = T)
-scidbconnect()
+```
+$ scidb.py startall mydb
 ```
 
-The VM's SciDB database already contains several datasets. We can list them.
-```{r}
-scidblist()
-```
+# SciDB Data Structures and Query Languages
 
-To build a new dataset in the database, we use the `build` function to create an AFL query expression, then `scidbeval` to evaluate it into an actual SciDB data object. 
+## AQL and AFL
 
-As an example, we create a sparse matrix as follows:
-
-```{r}
-x <- build("<v:double>[i=1:2,2,0, j=1:3,1,0], i*j)", dim = c(3,4))
-scidbeval(x, name = "test") # Give the dataset a meaningful name
-```
-
-Now the matrix is in the SciDB database. Let's load it into R as a `scidb` object.
-```{r}
-x.scidb <- scidb("test") # Retrieve the dataset by its name
-print(x.scidb)
-```
-
-
-# Data
-
-## Download data
-
-We use the movie ratings data from [MovieLens](https://grouplens.org/datasets/movielens/).
-
-
-```{r}
-# Get the small dataset
-data.dir <- "ml-latest-small"
-if (!dir.exists(data.dir)) {
-  download.file("http://files.grouplens.org/datasets/movielens/ml-latest-small.zip", 
-                destfile = "ml-20m.zip")
-  unzip("ml-20m.zip")
-}
-```
-
-
-## Load Data into R
+SciDB provides query languages AQL, for querying the database, and AFL, for performing function calls on database objects. They are accessed from the unix terminal.
 
 ```
 $ iquery
 AQL% set lang AFL;
 AFL%
 ```
+## `scidb` R package
 
+The `scidb` R package provides an interface to R, allowing interaction with the database from R, primarily using the `iquery` function.
+
+# Basics of SciDB R package
+
+First, load the library, and connect to the SciDB database. By default, it connects to the localhost.
+```{r}
+library(scidb, quietly = T)
+dbConnect <- scidbconnect()
 ```
-AFL% CREATE ARRAY ratings <userId:int64, movieID:int64, rating:double, timestamp:int64> [i=1:700,1000000,0]
-AFL% load(ratings, '/home/scidb/Project/ml-latest-small/ratings_0.csv', -2, 'csv');
-AFL% store(redimension(ratings, <val:double>[userId=1:*,?,0,movieID=1:*,?,0]), ratings_matrix);
-```
+
+The datasets in the SciDB database can be listed using the following command.
 
 ```{r}
-if ("ratings" %in% scidbls()) iquery("remove(ratings);")
-iquery("CREATE ARRAY ratings <userId:int64, movieID:int64, rating:double NOT NULL, timestamp:int64> [i=1:?,1000000,0];")
+(existingArray <- iquery(db = dbConnect, query = "list('arrays')", return = T))
+```
+
+The above expression illustrates the basic usage of the `iquery` function: it is told the database to connect to, and the query to run. Setting `return = T` will return the scidb arrary to an R data frame, which we have called `existingArray`. By default, `return = F`, meaning that the query is performed in the SciDB database, but no output is returned to R.
+
+# Data
+
+We use the movie ratings data from [MovieLens](https://grouplens.org/datasets/movielens/).
+
+There are 2 datasets provided, 
+
+- Full data set
+- Small data set
+
+
+## Download data
+
+```{r download_small_dataset}
+# Get the small dataset
+data.dir <- "/home/scidb/Project/ml-latest-small"
+if (!dir.exists(data.dir)) {
+  download.file("http://files.grouplens.org/datasets/movielens/ml-latest-small.zip", 
+                destfile = "/home/scidb/Project/ml-latest-small.zip")
+  unzip("/home/scidb/Project/ml-latest-small.zip")
+  
+  # System command to strip header (first line) from data file ratings.csv
+  system(sprintf("tail -n +2 %s/ratings.csv > %s/ratings_noHeader.csv", data.dir, data.dir))
+}
+rm(data.dir)
+
+# Get the small dataset
+data.dir <- "/home/scidb/Project/ml-20m"
+if (!dir.exists(data.dir)) {
+  download.file("http://files.grouplens.org/datasets/movielens/ml-20m.zip", 
+                destfile = "/home/scidb/Project/ml-20m.zip")
+  unzip("/home/scidb/Project/ml-20m.zip")
+  
+  # System command to strip header (first line) from data file ratings.csv
+  system(sprintf("tail -n +2 %s/ratings.csv > %s/ratings_noHeader.csv", data.dir, data.dir))
+}
+rm(data.dir)
+```
+
+
+
+## Load Data into SciDB
+
+```{r}
+existingArray = iquery(db = dbConnect, "list('arrays')", return = T)
+if("ratings" %in% existingArray$name) iquery(dbConnect, "remove(ratings)")
+
+iquery(dbConnect, "CREATE ARRAY ratings <userId:int64, movieID:int64, rating:double NOT NULL, timestamp:int64> [i=0:?,1000000,0]")
 # Note: It's important to make rating column NOT NULL, to enable the use of spgemm later on.
 ```
 
 ```{r}
-iquery("load(ratings, '/home/scidb/Project/ml-latest-small/ratings_0.csv', -2, 'csv');")
+iquery(dbConnect, "load(ratings, '/home/scidb/Project/ml-latest-small/ratings_noHeader.csv', -2, 'csv')")
 ```
 
 ```{r}
-(m_min <- iquery("aggregate(ratings, min(movieID));", return = T))
-(m_max <- iquery("aggregate(ratings, max(movieID));", return = T))
+(m_min <- iquery(dbConnect, "aggregate(ratings, min(movieID))", return = T))
+(m_max <- iquery(dbConnect, "aggregate(ratings, max(movieID))", return = T))
 
-(u_min <- iquery("aggregate(ratings, min(userId));", return = T))
-(u_max <- iquery("aggregate(ratings, max(userId));", return = T))
+(u_min <- iquery(dbConnect, "aggregate(ratings, min(userId))", return = T))
+(u_max <- iquery(dbConnect, "aggregate(ratings, max(userId))", return = T))
 
-(n_ratings <- iquery("aggregate(ratings, count(*));", return = T))
+(n_ratings <- iquery(dbConnect, "aggregate(ratings, count(*))", return = T))
 ```
 
 The movieIDs range from 1 to 163949. The userIds range from 1 to 671. There are 100004 ratings available. The matrix is huge but very sparse.
@@ -109,9 +128,13 @@ The movieIDs range from 1 to 163949. The userIds range from 1 to 671. There are 
 Redimension it so that userId is the first dimension (rows) and movieID is the second dimension (columns).
 
 ```{r}
-if ("ratings_matrix" %in% scidbls()) iquery("remove(ratings_matrix);")
-iquery("store(redimension(ratings, <rating:double NOT NULL>[userId=1:671,?,0,movieID=1:163949,?,0]), ratings_matrix);")
+existingArray = iquery(dbConnect, "list('arrays')", return = T)
+if("ratings_matrix" %in% existingArray$name) iquery(dbConnect, "remove(ratings_matrix)")
+
+iquery(dbConnect, "store(redimension(ratings, <rating:double NOT NULL>[userId=0:671,?,0,movieID=0:163949,?,0]), ratings_matrix)")
 ```
+
+### Plot image
 
 We can try to visualize the matrix using the `image` function provided in `vm_functions.R`.
 
@@ -122,15 +145,32 @@ ratings_matrix <- scidb("ratings_matrix")
 system.time(image(ratings_matrix, grid = c(100,10)))
 ```
 
+### Compute correlation
 Now, let's try to compute the correlation between users. Since `userId` is in rows, we just have to normalize the rows and matrix multiply $M * M^T$.
 
 ```{r}
 # Figure out how to normalize the data first
 
-system.time(corr <- iquery("spgemm(ratings_matrix, transpose(ratings_matrix));", 
+iquery(dbConnect, "load_library('linear_algebra')")
+
+system.time(corr <- iquery(dbConnect, 
+                           "spgemm(ratings_matrix, transpose(ratings_matrix))", 
                            return = T))
 
 head(corr)
 ```
 
 
+
+### SVD
+
+```{r}
+iquery(dbConnect, "load_library('dense_linear_algebra')")
+```
+
+```{r cache = T}
+ratings_singularValues <- iquery(dbConnect, "store(gesvd(ratings_matrix, 'S'), ratings_singularValues)", return = T)
+```
+```{r}
+plot(ratings_singularValues)
+```
