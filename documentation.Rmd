@@ -139,8 +139,8 @@ iquery(dbConnect, "load(ratings, '/home/scidb/Project/ml-latest-small/ratings_no
     Additionally, to be able to use subsequent functions, we need to specify the size of each dimension.
     
 ```{r find_size_small_dataset, eval = F}
-(u_max <- iquery(dbConnect, "aggregate(ratings, max(userId))", return = T))
-(m_max <- iquery(dbConnect, "aggregate(ratings, max(movieID))", return = T))
+print(u_max <- iquery(dbConnect, "aggregate(ratings, max(userId))", return = T))
+print(m_max <- iquery(dbConnect, "aggregate(ratings, max(movieID))", return = T))
 ```
     
     The userIds range from 1 to 671. The movieIDs range from 1 to 163949. Now, we redimension `ratings` array so that userId is the first dimension (rows) and movieID is the second dimension (columns).
@@ -156,7 +156,7 @@ iquery(dbConnect,
 Note that even though `ratings_matrix` is a huge matrix (671 x 163949), it is very sparse.
     
 ```{r count_small_dataset, eval = F, cache = T}
-(n_ratings <- iquery(dbConnect, "aggregate(ratings, count(*))", return = T))
+print(n_ratings <- iquery(dbConnect, "aggregate(ratings, count(*))", return = T))
 ```
 
 There are 100004 ratings available. All other entries of the matrix are zero, and not explicitly stored in the database. (In fact, according to the MovieLens data description, only 9000 movies are rated by the 700 users.)
@@ -176,6 +176,29 @@ query <- sprintf("redimension(RATINGS, <rating:double NOT NULL>[userId=0:%d,?,0,
                  U_max, M_max)
 iquery(dbConnect, sprintf("store(%s, RATINGS_MATRIX)", query)
 ```
+
+## Essential statistics using SciDB
+
+We show some essential statistical methods using SciDB functions.
+
+What is the average rating of each user?
+
+```{r}
+userAvg <- iquery(dbConnect, "aggregate(ratings_matrix, avg(rating), userId)", return = T)
+head(userAvg)
+```
+
+Similarly, we can obtain the the average average rating of each movie.
+
+```{r}
+movieAvg <- iquery(dbConnect, "aggregate(ratings_matrix, avg(rating), movieID)", return = T)
+head(movieAvg)
+```
+
+A note of caution, the averages are computed only on non-zero ratings.
+
+Other aggregation functions include `sum`, `min`, `max`, `stdev`, etc.
+
 
 # Clustering Users in the Small Dataset
 
@@ -201,27 +224,64 @@ iquery(dbConnect, "load_library('linear_algebra')")
 iquery(dbConnect, "store(spgemm(ratings_matrix, transpose(ratings_matrix)), ratings_matrix_MxMT)")
 ```
 
-```{r show_ratings_matrix_MxMT_10x10, cache = T}
-ratings_matrix_MxMT_10 <- iquery(dbConnect, "subarray(ratings_matrix_MxMT, 0, 0, 9, 9)", return = T)
-(Matrix::spMatrix(nrow = 10, ncol = 10, 
-                  i = ratings_matrix_MxMT_10$userId, 
-                  j = ratings_matrix_MxMT_10$userId2,
-                  x = ratings_matrix_MxMT_10$multiply))
+```{r convert2correlationMatrix_small_data, eval = F}
+# Average user rating
+query_userAvg <- "apply(aggregate(ratings_matrix, sum(rating), userId), rating_avg, rating_sum/163949.0)"
+iquery(dbConnect, sprintf("store(project(%s, rating_avg), ratings_userAvg)", query_userAvg))
+
+# Mean sum of square ratings
+query_rating_sq <- "apply(ratings_matrix, rating_sq, rating * rating)"
+query_rating_MSS <- sprintf("apply(aggregate(%s, sum(rating_sq), userId), rating_MSS, rating_sq_sum/163949.0)",
+                            query_rating_sq)
+iquery(dbConnect, sprintf("store(project(%s, rating_MSS), ratings_userMSS)", query_rating_MSS))
+
+# Cross join with ratings matrix
+query_crossjoin <- "cross_join(ratings_matrix_MxMT as A, ratings_userAvg as B, A.userId, B.userId)"
+query_crossjoin <- sprintf("cross_join(%s as A, ratings_userAvg as B, A.userId2, B.userId)", 
+                           query_crossjoin)
+query_crossjoin <- sprintf("cross_join(%s as A, ratings_userMSS as B, A.userId, B.userId)",
+                           query_crossjoin)
+query_crossjoin <- sprintf("cross_join(%s as A, ratings_userMSS as B, A.userId2, B.userId)",
+                           query_crossjoin)
+iquery(dbConnect, sprintf("store(%s, ratings_crossjoin)", query_crossjoin))
+
+# Compute correlation matrix from M*M^T
+query <- "apply(ratings_crossjoin, correlation, 
+(multiply/163949.0 - rating_avg * rating_avg_2) / 
+sqrt((rating_MSS - pow(rating_avg, 2)) * (rating_MSS_2 - pow(rating_avg_2, 2))))"
+
+iquery(dbConnect, 
+       sprintf("store(project(%s, correlation), ratings_correlationMatrix)", query))
+```
+
+
+```{r retrieve_correlationMatrix, cache = T}
+correlationMatrix <- iquery(dbConnect, 
+                            "filter(ratings_correlationMatrix, TRUE)", 
+                            return = T)
+
+library(Matrix, quietly = T)
+correlationMatrix <- spMatrix(nrow = 671, ncol = 671, 
+                              i = correlationMatrix$userId, 
+                              j = correlationMatrix$userId2,
+                              x = correlationMatrix$correlation)
+```
+
+We visualize the correlation matrix using the `heatmap` function in R. (Actually, we'll visualize `1-correlationMatrix`, which is the dissimilarity matrix.) This function also automatically computes the dendrogram and reorders the rows and columns to produce a visual clustering of the userIds.
+
+```{r heatmap_correlationMatrix, cache = T}
+heatmap(as.matrix(1 - correlationMatrix), symm = T, xlab = "userId", ylab = "userId")
 ```
 
 ### Hierarchical clustering
 
-```{r, eval = T, cache = T}
-ratings_matrix_MxMT <- iquery(dbConnect, "subarray(ratings_matrix_MxMT, null, null, null, null)", return = T)
-
-library(Matrix, quietly = T)
-correlationMatrix <- spMatrix(nrow = 671, ncol = 671, 
-                              i = ratings_matrix_MxMT$userId, 
-                              j = ratings_matrix_MxMT$userId2,
-                              x = ratings_matrix_MxMT$multiply)
-
-# hc <- hclust(as.dist(correlationMatrix))
+We now perform hierarchical clustering on the dissimilarity matrix `1-correlationMatrix`.
+```{r hclust_correlationMatrix, cache = T}
+hc <- hclust(as.dist(1 - correlationMatrix))
+plot(hc)
 ```
+
+
 
 ## Clustering using Principle Component Analysis and the SVD
 
