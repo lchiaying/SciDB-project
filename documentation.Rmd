@@ -9,24 +9,19 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Installation
 
-Download the virtual machine from <insert Google Docs URL>.
+# Introduction
+
+**Chia: add brief intro**
 
 Full documentation of SciDB is provided [here](https://paradigm4.atlassian.net/wiki/display/ESD/SciDB+Documentation).
 
 The `scidb` R package is available on [CRAN](https://cran.r-project.org/package=scidb), along with [documentation](https://cran.r-project.org/web/packages/scidb/vignettes/scidb.pdf).
 
-The virtual machine has R and RStudio server already set up with `scidb` R package installed. (Note the pre-installed version of `scidb` is not the latest version.)
 
+## SciDB Data Structures and Query Languages
 
-## Start the database
-
-```
-$ scidb.py startall mydb
-```
-
-# SciDB Data Structures and Query Languages
+**Charlie: Add explanation of data structures**
 
 ## AQL and AFL
 
@@ -41,7 +36,7 @@ AFL%
 
 The `scidb` R package provides an interface to R, allowing interaction with the database from R, primarily using the `iquery` function.
 
-# Basics of SciDB R package
+## Basics of SciDB R package
 
 First, load the library, and connect to the SciDB database. By default, it connects to the localhost.
 ```{r}
@@ -57,21 +52,49 @@ The datasets in the SciDB database can be listed using the following command.
 
 The above expression illustrates the basic usage of the `iquery` function: it is told the database to connect to, and the query to run. Setting `return = T` will return the scidb arrary to an R data frame, which we have called `existingArray`. By default, `return = F`, meaning that the query is performed in the SciDB database, but no output is returned to R.
 
-# Data
+## Installation
+
+
+### Method 1: SciDB's VM
+
+Download the virtual machine from [here](insert Google Docs URL). 
+The virtual machine has SciDB pre-installed, and R and RStudio server already set up with `scidb` R package installed. 
+However, note that the SciDB installation has problems with MPI, preventing the use of some essential functions such as the `gesvd` for computing SVD. Also, the installed version of `scidb` R package is not the latest version.
+
+### Method 2: Install from scratch
+
+We installed the SciDB from scratch.
+
+**Charlie: add installation instructions**
+
+
+
+### Start the database
+
+```
+$ scidb.py startall mydb
+```
+
+
+# The Big Data Problem
 
 We use the movie ratings data from [MovieLens](https://grouplens.org/datasets/movielens/).
 
 There are 2 datasets provided, 
 
 - Full data set
-- Small data set
+- Small data set 
+
+**Chia: add explanation of data, describe clustering goal**
 
 
 ## Download data
 
+The following script downloads the two datasets from the MovieLens website, and stores them into respective subfolders in `/home/scidb/Project`.
+
 ```{r download_data}
-# Get the small dataset
-data.dir <- "/home/scidb/Project/ml-latest-small"
+## Get the small dataset
+data.dir <- "/home/scidb/Project/ml-latest-small" # Note: the full path is specified
 if (!dir.exists(data.dir)) {
   download.file("http://files.grouplens.org/datasets/movielens/ml-latest-small.zip", 
                 destfile = "/home/scidb/Project/ml-latest-small.zip")
@@ -82,14 +105,13 @@ if (!dir.exists(data.dir)) {
 }
 rm(data.dir)
 
-# Get the small dataset
+## Get the full dataset
 data.dir <- "/home/scidb/Project/ml-20m"
 if (!dir.exists(data.dir)) {
   download.file("http://files.grouplens.org/datasets/movielens/ml-20m.zip", 
                 destfile = "/home/scidb/Project/ml-20m.zip")
   unzip("/home/scidb/Project/ml-20m.zip")
   
-  # System command to strip header (first line) from data file ratings.csv
   system(sprintf("tail -n +2 %s/ratings.csv > %s/ratings_noHeader.csv", data.dir, data.dir))
 }
 rm(data.dir)
@@ -99,64 +121,73 @@ rm(data.dir)
 
 ## Load Data into SciDB
 
-```{r load_small_dataset, eval = F, cache = T}
-existingArray = iquery(dbConnect, "list('arrays')", return = T)
-if("ratings" %in% existingArray$name) iquery(dbConnect, "remove(ratings)")
+Next, we load the data into the SciDB database. Because the data array is a 2D array (i.e. a matrix), whereas the data is provided as a flat array (i.e. 1D array), loading the data has two steps. We explain the steps for the small dataset. 
 
+1. First, load the CSV file as a 1D array, named `ratings`. This is done by first creating the array, and then using the `load` function to read in the CSV file.
+    
+```{r load_small_dataset, eval = F, cache = T}
 iquery(dbConnect, "CREATE ARRAY ratings <userId:int64, movieID:int64, rating:double NOT NULL, timestamp:int64> [i=0:?,1000000,0]")
-# Note: It's important to make rating column NOT NULL, to enable the use of spgemm later on.
+# Note 1: It's important to make rating column NOT NULL, to enable the use of spgemm later on.
+# Note 2: The 0:? allows us to create the array without knowing the size of the input file.
+# Note 3: The chunk size is 1000000 and overlap is 0
 
 iquery(dbConnect, "load(ratings, '/home/scidb/Project/ml-latest-small/ratings_noHeader.csv', -2, 'csv')")
 ```
-
-
-```{r}
-(m_max <- iquery(dbConnect, "aggregate(ratings, max(movieID))", return = T))
+    
+2. The second step is to *redimension* the `ratings` array from a 1D to 2D array. The columns `userId` and `movieID` in the 1D array will become the dimensions of the 2D array. 
+    
+    Additionally, to be able to use subsequent functions, we need to specify the size of each dimension.
+    
+```{r find_size_small_dataset, eval = F}
 (u_max <- iquery(dbConnect, "aggregate(ratings, max(userId))", return = T))
-
+(m_max <- iquery(dbConnect, "aggregate(ratings, max(movieID))", return = T))
+```
+    
+    The userIds range from 1 to 671. The movieIDs range from 1 to 163949. Now, we redimension `ratings` array so that userId is the first dimension (rows) and movieID is the second dimension (columns).
+    
+```{r redimension_small_dataset, eval = F, cache = T}
+iquery(dbConnect, 
+       "store(redimension(ratings, <rating:double NOT NULL>[userId=0:671,?,0,movieID=0:163949,?,0]), ratings_matrix)")
+# Note: We start the indices from 0, not 1, to enable the use of spgemm later on.
+```
+    
+    The `store` function stores the resulting array into a new array named `ratings_matrix`.
+    
+Note that even though `ratings_matrix` is a huge matrix (671 x 163949), it is very sparse.
+    
+```{r count_small_dataset, eval = F, cache = T}
 (n_ratings <- iquery(dbConnect, "aggregate(ratings, count(*))", return = T))
 ```
 
-The movieIDs range from 1 to 163949. The userIds range from 1 to 671. There are 100004 ratings available. The matrix is huge but very sparse.
+There are 100004 ratings available. All other entries of the matrix are zero, and not explicitly stored in the database. (In fact, according to the MovieLens data description, only 9000 movies are rated by the 700 users.)
 
-Redimension it so that userId is the first dimension (rows) and movieID is the second dimension (columns).
 
-```{r}
-existingArray = iquery(dbConnect, "list('arrays')", return = T)
-if("ratings_matrix" %in% existingArray$name) iquery(dbConnect, "remove(ratings_matrix)")
-
-iquery(dbConnect, "store(redimension(ratings, <rating:double NOT NULL>[userId=0:671,?,0,movieID=0:163949,?,0]), ratings_matrix)")
-```
-
-Below is the corresponding code for loading the full dataset into SciDB.
+Below is the corresponding code for loading the full dataset into SciDB. The names of the data arrays are `RATINGS` and `RATINGS_MATRIX`.
 
 ```{r load_full_dataset, eval = F, cache=T}
 iquery(dbConnect, "CREATE ARRAY RATINGS <userId:int64, movieID:int64, rating:double NOT NULL, timestamp:int64> [i=0:?,1000000,0]")
 
 iquery(dbConnect, "load(RATINGS, '/home/scidb/Project/ml-20m/ratings_noHeader.csv', -2, 'csv')")
 
-m_max <- iquery(dbConnect, "aggregate(RATINGS, max(movieID))", return = T)$movieID_max
-u_max <- iquery(dbConnect, "aggregate(RATINGS, max(userId))", return = T)$userId_max
+U_max <- iquery(dbConnect, "aggregate(RATINGS, max(userId))", return = T)$userId_max
+M_max <- iquery(dbConnect, "aggregate(RATINGS, max(movieID))", return = T)$movieID_max
 
-query <- sprintf("store(redimension(RATINGS, <rating:double NOT NULL>[userId=0:%d,?,0,movieID=0:%d,?,0]), RATINGS_MATRIX)",
-                 u_max, m_max)
-iquery(dbConnect, query)
+query <- sprintf("redimension(RATINGS, <rating:double NOT NULL>[userId=0:%d,?,0,movieID=0:%d,?,0])",
+                 U_max, M_max)
+iquery(dbConnect, sprintf("store(%s, RATINGS_MATRIX)", query)
 ```
 
-# Doing Fun Stuff with the Data
+# Clustering Users in the Small Dataset
 
-## Visualize ratings as image
+Using the small dataset, we'll cluster users in 2 ways:
 
-We can try to visualize the matrix using the `image` function provided in `vm_functions.R`.
+1. Compute pairwise correlation (over movieIDs) between users. Apply hierarchical clustering on the correlation matrix.
+1. Compute the SVD of the ratings matrix and keep the top 10 singular values. Apply kmeans clustering on the top 10 singular component coefficients.
 
-```{r}
-source("~/vm_functions.R")
+The correlation matrix and SVD will be computed using SciDB functionality, while kmeans and hierarchical clustering will be computed using base R functionality.
 
-ratings_matrix <- scidb("ratings_matrix")
-system.time(image(ratings_matrix, grid = c(100,10)))
-```
+## Clustering using the correlation matrix
 
-## Compute correlation
 Now, let's try to compute the correlation between users. Since `userId` is in rows, we just have to normalize the rows and matrix multiply $M * M^T$.
 
 The SciDB function for sparse matix multiply is `spgemm`, in the `linear_algebra` library.
@@ -167,30 +198,44 @@ iquery(dbConnect, "load_library('linear_algebra')")
 
 
 ```{r spgemm_small_data, eval=F}
-ratings_matrix_MxMT <- iquery(
-  dbConnect, 
-  "store(spgemm(ratings_matrix, transpose(ratings_matrix)), ratings_matrix_MxMT)", 
-  return = T)
-
-head(ratings_matrix_MxMT)
+iquery(dbConnect, "store(spgemm(ratings_matrix, transpose(ratings_matrix)), ratings_matrix_MxMT)")
 ```
 
-
-```{r spgemm_full_data, eval=F}
-system.time(
-  iquery(dbConnect, 
-         "store(spgemm(RATINGS_MATRIX, transpose(RATINGS_MATRIX)), RATINGS_MATRIX_MxMT)")
-)
+```{r show_ratings_matrix_MxMT_10x10, cache = T}
+ratings_matrix_MxMT_10 <- iquery(dbConnect, "subarray(ratings_matrix_MxMT, 0, 0, 9, 9)", return = T)
+(Matrix::spMatrix(nrow = 10, ncol = 10, 
+                  i = ratings_matrix_MxMT_10$userId, 
+                  j = ratings_matrix_MxMT_10$userId2,
+                  x = ratings_matrix_MxMT_10$multiply))
 ```
 
+### Hierarchical clustering
 
-## SVD
+```{r, eval = T, cache = T}
+ratings_matrix_MxMT <- iquery(dbConnect, "subarray(ratings_matrix_MxMT, null, null, null, null)", return = T)
 
-```{r}
+library(Matrix, quietly = T)
+correlationMatrix <- spMatrix(nrow = 671, ncol = 671, 
+                              i = ratings_matrix_MxMT$userId, 
+                              j = ratings_matrix_MxMT$userId2,
+                              x = ratings_matrix_MxMT$multiply)
+
+# hc <- hclust(as.dist(correlationMatrix))
+```
+
+## Clustering using Principle Component Analysis and the SVD
+
+Next, we perform the SVD on the ratings matrix to obtain the top 10 princple components of the ratings data.
+
+SciDB provides the `gesvd` function in the `dense_linear_algebra` library, for computing the SVD of a dense matrix. To use this function, first load the library.
+
+```{r load_dense_linear_algebra_library}
 iquery(dbConnect, "load_library('dense_linear_algebra')")
 ```
 
-```{r normalize_small_data, eval = F}
+Next, we center the data at 0, a requirement of the PCA. 
+
+```{r center_small_data, eval = F}
 query_userAvg <- "aggregate(ratings_matrix, avg(rating), userId)"
 query_crossjoin <- sprintf("cross_join(ratings_matrix as A, %s as B, A.userId, B.userId)",
                            query_userAvg)
@@ -202,15 +247,64 @@ ratings_matrix_normalized <- iquery(dbConnect,
                                     return = T)
 ```
 
+Now, we are ready to compute the singular values of the ratings matrix.
+
+**Charlie to run this chunk**
 
 ```{r gesvd_small_data, eval = F, cache = T}
-ratings_singularValues <- iquery(dbConnect, 
-                                 "store(gesvd(ratings_matrix, 'S'), ratings_singularValues)", 
-                                 return = T)
+iquery(dbConnect, "store(gesvd(ratings_matrix, 'S'), ratings_singularValues)")
+```
+
+By inspecting the plot of the singular values, we see that the 10 singular values capture a large amount of the variation in the data.
+
+```{r plot_singularValues, eval = T, cache = T}
+# ratings_singularValues <- iquery(dbConnect, "subarray(ratings_singularValues, null, null)", return = T)
+# plot(ratings_singularValues)
 ```
 
 
+We also need the left and right singular values. We'll get SciDB to compute and store the singular values, and then extract only the first 10 singular values into R.
+
+**Charlie to run this chunk**
+```{r gesvd_U_VT_small_data, eval = F, cache = T}
+iquery(dbConnect, "store(gesvd(ratings_matrix, 'U'), ratings_U)")
+iquery(dbConnect, "store(gesvd(ratings_matrix, 'VT'), ratings_VT)")
+```
+
+
+```{r gesvd_U_VT_get10_small_data, cache = T}
+# ratings_U10<- iquery(dbConnect, "subarray(ratings_U, null, 0, null, 9)", return = T)
+# ratings_VT10<- iquery(dbConnect, "subarray(ratings_VT, null, 0, null, 9)", return = T)
+```
+
+### kmeans clustering
+
+
+
+## Visualize ratings as image
+
+We can try to visualize the matrix using the `image` function provided in `vm_functions.R`.
 
 ```{r}
-plot(ratings_singularValues)
+# source("~/vm_functions.R")
+
+# ratings_matrix <- scidb("ratings_matrix")
+# system.time(image(ratings_matrix, grid = c(100,10)))
 ```
+
+
+
+# Big Data Computations with the Full Dataset
+
+The computations in the previous section extend to using the full dataset. However, due to limited RAM and hard disk space on our laptops, we are unable to run the identical computations for the full dataset.
+
+We can still show a tractable example: finding the pairwise correlations between movies.
+
+
+```{r spgemm_full_data, eval=F}
+system.time(
+  iquery(dbConnect, 
+         "store(spgemm(transpose(RATINGS_MATRIX), RATINGS_MATRIX), RATINGS_MATRIX_MxMT)")
+)
+```
+

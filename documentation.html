@@ -123,130 +123,293 @@ $(document).ready(function () {
 </div>
 
 
-<div id="installation" class="section level1">
-<h1>Installation</h1>
-<p>Download the virtual machine from <insert Google Docs URL>.</p>
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p><strong>Chia: add brief intro</strong></p>
 <p>Full documentation of SciDB is provided <a href="https://paradigm4.atlassian.net/wiki/display/ESD/SciDB+Documentation">here</a>.</p>
 <p>The <code>scidb</code> R package is available on <a href="https://cran.r-project.org/package=scidb">CRAN</a>, along with <a href="https://cran.r-project.org/web/packages/scidb/vignettes/scidb.pdf">documentation</a>.</p>
-<p>The virtual machine has R and RStudio server already set up with <code>scidb</code> R package installed. (Note the pre-installed version of <code>scidb</code> is not the latest version.)</p>
+<div id="scidb-data-structures-and-query-languages" class="section level2">
+<h2>SciDB Data Structures and Query Languages</h2>
+<p><strong>Charlie: Add explanation of data structures</strong></p>
 </div>
-<div id="scidb-query" class="section level1">
-<h1>SciDB query</h1>
-<p>Uses the AFL query language blah blah blah.</p>
+<div id="aql-and-afl" class="section level2">
+<h2>AQL and AFL</h2>
+<p>SciDB provides query languages AQL, for querying the database, and AFL, for performing function calls on database objects. They are accessed from the unix terminal.</p>
+<pre><code>$ iquery
+AQL% set lang AFL;
+AFL%</code></pre>
 </div>
-<div id="basics-of-scidb-r-package" class="section level1">
-<h1>Basics of SciDB R package</h1>
-<p>First, load the library, and connect to the SciDB database.</p>
+<div id="scidb-r-package" class="section level2">
+<h2><code>scidb</code> R package</h2>
+<p>The <code>scidb</code> R package provides an interface to R, allowing interaction with the database from R, primarily using the <code>iquery</code> function.</p>
+</div>
+<div id="basics-of-scidb-r-package" class="section level2">
+<h2>Basics of SciDB R package</h2>
+<p>First, load the library, and connect to the SciDB database. By default, it connects to the localhost.</p>
 <pre class="r"><code>library(scidb, quietly = T)</code></pre>
+<pre><code>## Attaching package bit</code></pre>
+<pre><code>## package:bit (c) 2008-2012 Jens Oehlschlaegel (GPL-2)</code></pre>
+<pre><code>## creators: bit bitwhich</code></pre>
+<pre><code>## coercion: as.logical as.integer as.bit as.bitwhich which</code></pre>
+<pre><code>## operator: ! &amp; | xor != ==</code></pre>
+<pre><code>## querying: print length any all min max range sum summary</code></pre>
+<pre><code>## bit access: length&lt;- [ [&lt;- [[ [[&lt;-</code></pre>
+<pre><code>## for more help type ?bit</code></pre>
+<pre><code>## 
+## Attaching package: 'bit'</code></pre>
+<pre><code>## The following object is masked from 'package:base':
+## 
+##     xor</code></pre>
+<pre><code>## Attaching package bit64</code></pre>
+<pre><code>## package:bit64 (c) 2011-2012 Jens Oehlschlaegel (GPL-2 with commercial restrictions)</code></pre>
+<pre><code>## creators: integer64 seq :</code></pre>
+<pre><code>## coercion: as.integer64 as.vector as.logical as.integer as.double as.character as.bin</code></pre>
+<pre><code>## logical operator: ! &amp; | xor != == &lt; &lt;= &gt;= &gt;</code></pre>
+<pre><code>## arithmetic operator: + - * / %/% %% ^</code></pre>
+<pre><code>## math: sign abs sqrt log log2 log10</code></pre>
+<pre><code>## math: floor ceiling trunc round</code></pre>
+<pre><code>## querying: is.integer64 is.vector [is.atomic} [length] is.na format print</code></pre>
+<pre><code>## aggregation: any all min max range sum prod</code></pre>
+<pre><code>## cumulation: diff cummin cummax cumsum cumprod</code></pre>
+<pre><code>## access: length&lt;- [ [&lt;- [[ [[&lt;-</code></pre>
+<pre><code>## combine: c rep cbind rbind as.data.frame</code></pre>
+<pre><code>## for more help type ?bit64</code></pre>
+<pre><code>## 
+## Attaching package: 'bit64'</code></pre>
+<pre><code>## The following object is masked from 'package:bit':
+## 
+##     still.identical</code></pre>
+<pre><code>## The following objects are masked from 'package:base':
+## 
+##     :, %in%, is.double, match, order, rank</code></pre>
 <pre><code>##    ____    _ ___  ___
 ##   / __/___(_) _ \/ _ )
 ##  _\ \/ __/ / // / _  |
 ## /___/\__/_/____/____/     Copyright 2016, Paradigm4, Inc.</code></pre>
-<pre><code>## 
-## Attaching package: 'scidb'</code></pre>
-<pre><code>## The following objects are masked from 'package:stats':
-## 
-##     phyper, qhyper</code></pre>
-<pre class="r"><code>scidbconnect()</code></pre>
-<p>The VM’s SciDB database already contains several datasets. We can list them.</p>
-<pre class="r"><code>scidblist()</code></pre>
-<pre><code>##  [1] &quot;A&quot;                    &quot;A1&quot;                   &quot;average_user_ratings&quot;
-##  [4] &quot;B&quot;                    &quot;B1&quot;                   &quot;C&quot;                   
-##  [7] &quot;C1&quot;                   &quot;distance&quot;             &quot;foo&quot;                 
-## [10] &quot;IHI_ACCELEROMETER&quot;    &quot;IHI_ACTIVITY&quot;         &quot;IHI_LIGHT&quot;           
-## [13] &quot;IHI_SLEEP_PREDICTION&quot; &quot;iris&quot;                 &quot;KG_POPULATION&quot;       
-## [16] &quot;KG_VAR_SVD&quot;           &quot;left&quot;                 &quot;m3x3&quot;                
-## [19] &quot;MODIS_DATA&quot;           &quot;MODIS_PLACES&quot;         &quot;quantile_array&quot;      
-## [22] &quot;ratings&quot;              &quot;ratings_matrix&quot;       &quot;right&quot;               
-## [25] &quot;test&quot;                 &quot;tmpDb&quot;</code></pre>
-<p>To build a new dataset in the database, we use the <code>build</code> function to create an AFL query expression, then <code>scidbeval</code> to evaluate it into an actual SciDB data object.</p>
-<p>As an example, we create a sparse matrix as follows:</p>
-<pre class="r"><code>x &lt;- build(&quot;&lt;v:double&gt;[i=1:2,2,0, j=1:3,1,0], i*j)&quot;, dim = c(3,4))
-scidbeval(x, name = &quot;test&quot;) # Give the dataset a meaningful name</code></pre>
-<pre><code>## SciDB expression  test
-## SciDB schema  &lt;val:string&gt; [i=0:2,1000,0,j=0:3,1000,0] 
-##   variable dimension   type nullable start end chunk
-## 1        i      TRUE  int64    FALSE     0   2  1000
-## 2        j      TRUE  int64    FALSE     0   3  1000
-## 3      val     FALSE string     TRUE</code></pre>
-<p>Now the matrix is in the SciDB database. Let’s load it into R as a <code>scidb</code> object.</p>
-<pre class="r"><code>x.scidb &lt;- scidb(&quot;test&quot;) # Retrieve the dataset by its name
-print(x.scidb)</code></pre>
-<pre><code>## SciDB expression  test
-## SciDB schema  &lt;val:string&gt; [i=0:2,1000,0,j=0:3,1000,0] 
-##   variable dimension   type nullable start end chunk
-## 1        i      TRUE  int64    FALSE     0   2  1000
-## 2        j      TRUE  int64    FALSE     0   3  1000
-## 3      val     FALSE string     TRUE</code></pre>
+<pre class="r"><code>dbConnect &lt;- scidbconnect()</code></pre>
+<p>The datasets in the SciDB database can be listed using the following command.</p>
+<pre class="r"><code>(existingArray &lt;- iquery(db = dbConnect, query = &quot;list('arrays')&quot;, return = T))</code></pre>
+<pre><code>##    No                         name uaid aid
+## 1   0                            M   45  45
+## 2   1                      ratings   34  34
+## 3   2                      RATINGS   36  36
+## 4   3               ratings_matrix   31  31
+## 5   4               RATINGS_MATRIX   38  38
+## 6   5      ratings_matrix_centered   60  60
+## 7   6          ratings_matrix_MxMT   56  56
+## 8   7            ratings_userMeans   48  48
+## 9   8                        tmpDb   17  17
+## 10  9        tmp_ratings_userMeans   50  50
+## 11 10 tmp_ratings_userMeans_matrix   54  54
+##                                                                                           schema
+## 1                                                    M&lt;v:double&gt; [row=0:3,1000,0,col=0:0,1000,0]
+## 2   ratings&lt;userId:int64,movieID:int64,rating:double NOT NULL,timestamp:int64&gt; [i=0:*,1000000,0]
+## 3   RATINGS&lt;userId:int64,movieID:int64,rating:double NOT NULL,timestamp:int64&gt; [i=0:*,1000000,0]
+## 4           ratings_matrix&lt;rating:double NOT NULL&gt; [userId=0:671,1000,0,movieID=0:163949,1000,0]
+## 5        RATINGS_MATRIX&lt;rating:double NOT NULL&gt; [userId=0:138493,1000,0,movieID=0:131262,1000,0]
+## 6  ratings_matrix_centered&lt;rating_centered:double&gt; [userId=0:671,1000,0,movieID=0:163949,1000,0]
+## 7       ratings_matrix_MxMT&lt;multiply:double NOT NULL&gt; [userId=0:671,1000,0,userId2=0:671,1000,0]
+## 8                                     ratings_userMeans&lt;rating_avg:double&gt; [userId=0:671,1000,0]
+## 9                                                  tmpDb&lt;val:double&gt; [i=0:99,100,0,j=0:99,100,0]
+## 10         tmp_ratings_userMeans&lt;rating_avg:double,movieID:int64 NOT NULL&gt; [userId=0:671,1000,0]
+## 11      tmp_ratings_userMeans_matrix&lt;rating_avg:double&gt; [userId=0:671,1000,0,movieID=0:0,1000,0]
+##    availability temporary
+## 1          TRUE     FALSE
+## 2          TRUE     FALSE
+## 3          TRUE     FALSE
+## 4          TRUE     FALSE
+## 5          TRUE     FALSE
+## 6          TRUE     FALSE
+## 7          TRUE     FALSE
+## 8          TRUE     FALSE
+## 9          TRUE     FALSE
+## 10         TRUE     FALSE
+## 11         TRUE     FALSE</code></pre>
+<p>The above expression illustrates the basic usage of the <code>iquery</code> function: it is told the database to connect to, and the query to run. Setting <code>return = T</code> will return the scidb arrary to an R data frame, which we have called <code>existingArray</code>. By default, <code>return = F</code>, meaning that the query is performed in the SciDB database, but no output is returned to R.</p>
 </div>
-<div id="data" class="section level1">
-<h1>Data</h1>
+<div id="installation" class="section level2">
+<h2>Installation</h2>
+<div id="method-1-scidbs-vm" class="section level3">
+<h3>Method 1: SciDB’s VM</h3>
+<p>Download the virtual machine from <a href="insert%20Google%20Docs%20URL">here</a>. The virtual machine has SciDB pre-installed, and R and RStudio server already set up with <code>scidb</code> R package installed. However, note that the SciDB installation has problems with MPI, preventing the use of some essential functions such as the <code>gesvd</code> for computing SVD. Also, the installed version of <code>scidb</code> R package is not the latest version.</p>
+</div>
+<div id="method-2-install-from-scratch" class="section level3">
+<h3>Method 2: Install from scratch</h3>
+<p>We installed the SciDB from scratch.</p>
+<p><strong>Charlie: add installation instructions</strong></p>
+</div>
+<div id="start-the-database" class="section level3">
+<h3>Start the database</h3>
+<pre><code>$ scidb.py startall mydb</code></pre>
+</div>
+</div>
+</div>
+<div id="the-big-data-problem" class="section level1">
+<h1>The Big Data Problem</h1>
+<p>We use the movie ratings data from <a href="https://grouplens.org/datasets/movielens/">MovieLens</a>.</p>
+<p>There are 2 datasets provided,</p>
+<ul>
+<li>Full data set</li>
+<li>Small data set</li>
+</ul>
+<p><strong>Chia: add explanation of data, describe clustering goal</strong></p>
 <div id="download-data" class="section level2">
 <h2>Download data</h2>
-<p>We use the movie ratings data from <a href="https://grouplens.org/datasets/movielens/">MovieLens</a>.</p>
-<pre class="r"><code># Get the small dataset
-data.dir &lt;- &quot;ml-latest-small&quot;
+<p>The following script downloads the two datasets from the MovieLens website, and stores them into respective subfolders in <code>/home/scidb/Project</code>.</p>
+<pre class="r"><code>## Get the small dataset
+data.dir &lt;- &quot;/home/scidb/Project/ml-latest-small&quot; # Note: the full path is specified
 if (!dir.exists(data.dir)) {
   download.file(&quot;http://files.grouplens.org/datasets/movielens/ml-latest-small.zip&quot;, 
-                destfile = &quot;ml-20m.zip&quot;)
-  unzip(&quot;ml-20m.zip&quot;)
-}</code></pre>
-</div>
-<div id="load-data-into-r" class="section level2">
-<h2>Load Data into R</h2>
-<pre><code>$ iquery
-AQL% set lang AFL;
-AFL%</code></pre>
-<pre><code>AFL% CREATE ARRAY ratings &lt;userId:int64, movieID:int64, rating:double, timestamp:int64&gt; [i=1:700,1000000,0]
-AFL% load(ratings, '/home/scidb/Project/ml-latest-small/ratings_0.csv', -2, 'csv');
-AFL% store(redimension(ratings, &lt;val:double&gt;[userId=1:*,?,0,movieID=1:*,?,0]), ratings_matrix);</code></pre>
-<pre class="r"><code>if (&quot;ratings&quot; %in% scidbls()) iquery(&quot;remove(ratings);&quot;)
-iquery(&quot;CREATE ARRAY ratings &lt;userId:int64, movieID:int64, rating:double NOT NULL, timestamp:int64&gt; [i=1:?,1000000,0];&quot;)
-# Note: It's important to make rating column NOT NULL, to enable the use of spgemm later on.</code></pre>
-<pre class="r"><code>iquery(&quot;load(ratings, '/home/scidb/Project/ml-latest-small/ratings_0.csv', -2, 'csv');&quot;)</code></pre>
-<pre class="r"><code>(m_min &lt;- iquery(&quot;aggregate(ratings, min(movieID));&quot;, return = T))</code></pre>
-<pre><code>##   i movieID_min
-## 1 0           1</code></pre>
-<pre class="r"><code>(m_max &lt;- iquery(&quot;aggregate(ratings, max(movieID));&quot;, return = T))</code></pre>
-<pre><code>##   i movieID_max
-## 1 0      163949</code></pre>
-<pre class="r"><code>(u_min &lt;- iquery(&quot;aggregate(ratings, min(userId));&quot;, return = T))</code></pre>
-<pre><code>##   i userId_min
-## 1 0          1</code></pre>
-<pre class="r"><code>(u_max &lt;- iquery(&quot;aggregate(ratings, max(userId));&quot;, return = T))</code></pre>
-<pre><code>##   i userId_max
-## 1 0        671</code></pre>
-<pre class="r"><code>(n_ratings &lt;- iquery(&quot;aggregate(ratings, count(*));&quot;, return = T))</code></pre>
-<pre><code>##   i  count
-## 1 0 100004</code></pre>
-<p>The movieIDs range from 1 to 163949. The userIds range from 1 to 671. There are 100004 ratings available. The matrix is huge but very sparse.</p>
-<p>Redimension it so that userId is the first dimension (rows) and movieID is the second dimension (columns).</p>
-<pre class="r"><code>if (&quot;ratings_matrix&quot; %in% scidbls()) iquery(&quot;remove(ratings_matrix);&quot;)
-iquery(&quot;store(redimension(ratings, &lt;rating:double NOT NULL&gt;[userId=1:671,?,0,movieID=1:163949,?,0]), ratings_matrix);&quot;)</code></pre>
-<p>We can try to visualize the matrix using the <code>image</code> function provided in <code>vm_functions.R</code>.</p>
-<pre class="r"><code>source(&quot;~/vm_functions.R&quot;)</code></pre>
-<pre><code>## Creating a generic function for 'image' from package 'graphics' in the global environment</code></pre>
-<pre class="r"><code>ratings_matrix &lt;- scidb(&quot;ratings_matrix&quot;)
-system.time(image(ratings_matrix, grid = c(100,10)))</code></pre>
-<p><img src="data:image/png;base64,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v7CwsG3kgQAAAIhPrbgDZIuqC+x//etfq32Ul5cXQnj55Zc/b/bFF19ML1q3bl0z6QAAADjUKfCVTjzxxC5duoQQRo4cWfU8fNpVV10VQliyZMmiRYs+Pbh79+4RI0aEEGrVqvX973//QGQFAADg0OMW+o+NHz++e/fu27Zt69q164gRIwYOHJi+on755Zc/8sgjCxcuvOqqqx599NFu3bpVjbz77rs//elPV65cGULo3bt38+bNI8xTWlq6bNmyzAZDCBURRgEAACBuORUVit7Hxo4dO3LkyPQ6JyfnvPPO69y5c8uWLY888shRo0a9//77OTk5PXr0yMvLq1u37qpVq+bOnZtuy82bN1+5cmXLli0jDNOvX78ZM2ZkPD4whD9FmAYAACCb5IQwderUAQMGxB3kwHEF/hNGjBhxzDHHDB069IMPPqioqFiwYMGCBQv2PaGiomLu3Llz587d9+DJJ588a9asaNt7CKFfv34lJSUZDC5btqy0tPTYaNMAAAAQK1fgP8MHH3wwceLE6dOnr1q16ovPzM/PHzJkyDXXXHP44Vn0q5D0LvQTQhgadxIAAIAa4go8IYTQqFGjUaNGjRo1qri4+LXXXisqKtq0adOOHTt27txZp06d+vXrH3300SeddFJeXl6bNm3iDgsAAMAhQYH/Im3atGnTps2FF14YdxAAAAAOdQp89lq5cuXjjz+ewWAqlQoh7Io6DwAAADFS4PdbRUXFli1bNm/e3LRp02bNmuXk5NTQF40aNWrOnDkZj78aYRQAAADipsBXV1FR8dprrz333HP/93//d8wxx5x33nnHHXdc+qOdO3eOHTv2D3/4w//93/+lj7Rq1ap///633377N77xjciTjB8/ft93zn91EydOTKVSp0QeCAAAgPjYhf4T/vd///fqq69etGhR1ZHDDjvs9ttvv+uuuz766KOLL754/vz5n55q1qzZU089ddpppx3ApF/ELvQAAMBBzy70h7StW7d269Ztw4YN+x4sLy8fM2ZMixYt9u7dm27vOTk53/72t4899ti333777bffrqio2LRp0w9/+MNXXnnlmGOOiSk7AAAABzkF/mMjR45Mt/cGDRpcffXV3/nOd7Zt2zZ16tQ1a9b88pe/zM3NDSF07tx52rRpJ554YnrknXfeGTJkyLx587Zs2TJy5MjJkyfH+R8AAADAwcst9JV27drVpEmTf/3rX8ccc8zzzz9f9dz7jh07zjjjjFdffTWEULdu3TfffLNVq1b7DpaVleXn57/66qu1a9fesmXLUUcdFVWkqVOn3n///RkMvv766zt37rw9hLFRRQEAAMgybqE/dL399tv/+te/Qghjxoypau8hhPr1699yyy3//u//HkK4/PLLq7X3EMLhhx9eUFBw8cUX79mz57nnnvvhD38YVaTZs2evWLEi4/GNUeUAAAAgCyjwld5888304txzz6320RlnnJFetG/f/jNnO3funF6sX78+wkiPPPLIsGHDMhgcMGBAUVFRpwijAAAAEDcFvtK7776bXrRo0aLaR1WviGvZsuVnzrZo0aJWrVp79+7dtm1bhJEaNGiQn5+fwWC9evVCCDX1enoAAADiUCvuANmiQYMG6UUqlar2Uf369Zs2bdq0adN0Mf60jRs37t27N+xT9QEAACBarsBXqro9/oknnrjtttv2/ahOnTpbtmz5gtnnn38+vfjmN78ZbarS0tKysrL9nSovL482BgAAALFT4CudcsopRx999ObNm0ePHt2jR49Onb7qI+Tbt28fPnx4CKFevXrnnHNOhJFGjBgxbty4jMejfBwfAACAuCnwlQ4//PChQ4eOGDHiww8/PP300/v37/+9732vS5cuX/AU+ubNm+fNmzd8+PCNGzeGEK644or69etHGCknJ6dx48YZDG7fvt1FeAAAgIOM98B/rKys7OKLL3766aerjtxwww2/+93vPvPkc889d/HixVV/bNOmzSuvvNKoUaOaDvlV5OfnFxYWTghhaNxJAAAAasgh+B54m9h97PDDD//73/9+1113fZUeXlJSUrU+66yznn/++Sxp7wAAAByU3EL/CbVr1x41atRtt932wgsvrFmzpm3btp93ZpMmTbp06XLyySdfccUV5557bq1afhUCAABADVLgP0Nubu4555zzxTvSLVy4sKZjlJaWLlu2LLPBEIJHIwAAAA4mCnz2GjRo0IwZMzIefznCKAAAAMRNgd8PFRUVq1atev3110tKSpo0adK+ffuTTz45Jyenhr6uX79++z5p/9UtW7astLT02MgDAQAAEB8FvtJrr722bdu2EMJZZ5316U/Ly8snTZo0fvz4//3f/933eMuWLYcOHXrjjTceccQRkUfq27dv3759MxhM70LfJPJAAAAAxEeBr3TTTTctWbIkhPDp9+rt3LmzT58++75ersp777132223Pfroo7NmzTr2WNe8AQAAqCkK/Jf7yU9+UtXejznmmC5durRv337Hjh2vv/76c889t3v37pdffvmHP/zh0qVLjzrqqHijAgAAcLBS4L/Es88+++ijj4YQ6tSp88tf/nLo0KG5ublVn7711ls//elP582bt2bNmnHjxo0bNy7Cr165cuXjjz+ewWAqlQoh7IowCgAAAHFT4L/EI488kl786le/uvnmm6t9+u1vf3vWrFmdOnVau3btb3/72//6r/+K8GH4UaNGzZkzJ+PxV6PKAQAAQBZQ4L/EM888E0Jo167dz372s8884Ygjjhg3blyfPn127tz57LPP9ujRI6qvnjBhQrdu3TIYnDhxYiqV6hRVDgAAALKAAv8l3nvvvRDC9773vVq1an3eOaeeemp6sW7duggLfLt27YYNG5bB4PTp01OpVJ2ocgAAAJAFPreUktagQYMQQtu2bb/gnNatW6frffpFdAAAABA5Bf5LtGvXLoSwefPmLzjnvffe27t3bwihWbNmBygWAAAAhxi30H+JH/7wh88///ycOXPuu+++2rVrf+Y5s2fPTi9OOumkCL96ypQpEydOzGCwqKgohLApwigAAADETYGvrkePHieccMLxxx+f/t8hQ4bcd999GzZs+OUvfzlmzJhPn79u3bpf/vKXIYRvfOMbXbt2jTDJ008/vWLFiozH34swCgAAAHFT4KubP3/+/Pnzq/5Yq1atww47LIRQUFBw3HHHXXvttVUflZSU/PnPf77jjjtKSkpCCLfddlv6zKg89NBDt956awaDAwYMKCoq6hhhFAAAAOKmwFe6/PLLmzdv/tZbb7311lsffPBB1fG9e/emn28PIaxatWrfkSuvvPLpp59Or08//fTPe89cxho0aJCfn5/BYL169UIIOdGmAQAAIFYKfKXrrrvuuuuuS6+3bt361j7efPPNt95669133602UlFRkV786Ec/mjJlSm5u7gFNDAAAwKFEgf8MTZo0adKkyWmnnbbvwX/96187duzY98iJJ57YoUOH3r17n3nmmTWUpLS0tKysbH+nysvLayIMAAAAMVLgv6ojjjjiiCOO2PfIfffdV6PfeOutt/7mN7/JePzNCKMAAAAQNwU+e+Xm5jZu3DiDwe3bt5eXl9eKPBAAAADxUeCzV0FBQUFBQQaD+fn5hYWFbSMPBAAAQHxcpgUAAIAEUOABAAAgAdxCn71KS0sXLFiQwS70JSUlIYSKGogEAABAXBT47DVo0KAZM2ZkPP5yhFEAAACImwKfvfr375/Z4IIFC0pKSo6NNg0AAACxUuCzV58+ffr06ZPBYH5+fklJSZPIAwEAABAfm9gBAABAAijwAAAAkABuoc9eK1eufPzxxzMYTKVSIYRdUecBAAAgRgp89ho1atScOXMyHn81wigAAADETYHPXhMmTOjWrVsGgxMnTkylUp0iDwQAAEB8FPjs1a5du2HDhmUwOH369FQqVSfyQAAAAMTHJnYAAACQAAo8AAAAJIBb6LPXlClTJk6cmMFgUVFRCGFT1HkAAACIkQKfvZ5++ukVK1ZkPP5ehFEAAACImwKfvR555JFbb701g8EBAwYUFRV1jDwQAAAA8VHgs1e9evXy8/MzGwwh5ESdBwAAgBjZxA4AAAASwBX4rFZSUpLBVHl5eeRJAAAAiJcCn72GDh163333ZTz+ZoRRAAAAiJsCn73q1avXuHHjDAa3b99eXl7u6QgAAICDiQKfvQoKCgoKCjIYzM/PLywsbBt5IAAAAOLjMi0AAAAkgAIPAAAACeAW+uxVWlq6YMGCsrKy/R1M711fUQORAAAAiIsCn70GDRo0Y8aMjMdfjjAKAAAAcVPgs1f//v0zG1ywYEFJScmx0aYBAAAgVgp89urTp0+fPn0yGMzPzy8pKWkSeSAAAADiYxM7AAAASAAFHgAAABLALfTZa+XKlQ8//HAGu9AXFxeHEHbVQCQAAADiosBnr1GjRs2ZMyfj8VcjjAIAAEDcFPj9s2vXrqVLlxYXF+/du7dVq1ZnnHHGkUceWUPfNWHChF69emUwWFBQUFxc3CnyQAAAAMRHga9u586dTz755N/+9rd+/fpddtllVce3b99+1113Pfjggzt37qw6WLt27SuvvPKuu+5q06ZN5EnatWvXrl27DAYnTZpUXFxcJ/JAAAAAxEeB/4Q1a9Zcdtlla9asCSFceOGFVcc3btx4wQUXFBUVVTt/z549U6ZMmT179qxZs7p163ZAswIAAHAoUeA/tn79+i5duuzYsSP9x9q1a6cX5eXlvXv3rmrvZ599docOHRo2bLh69eolS5Zs375969atl1xyyYoVK771rW/FEx0AAICDnQL/sZtvvjnd3nv06DF+/PhOnSqfIn/sscdeeumlEEK7du2mTJnStWvXqpF//vOfN91004wZM0pKSoYNGzZ9+vQI80yZMmXixIkZDKZ/17ApwigAAADETYGvtGHDhtmzZ4cQevbs+dRTTx122GFVHz366KMhhNq1a8+YMaNjx477TjVv3vzRRx8tLi5etmzZzGzGPtcAACAASURBVJkzN23a1KxZs6gizZs3b8WKFRmPvx9VDgAAALKAAl9p9erV6cWdd965b3sPISxfvjyE0KNHj2rtPe3www8vKCg4//zzKyoqFi1a1L9//6giTZ48+ZZbbslgcMCAAUVFRZ+RFQAAgMRS4Cu9/fbb6UWHDh2qfbR169YQwme297RTTz01vdi4cWOEkerUqZOfn5/BYL169SKMAQAAQDaoFXeAbHH00UenF9u3b6/2UZMmTUII+749rpry8vKaCwYAAADBFfgqVRfY//rXv95www37fpSXlzd37tyXX37582ZffPHF9KJ169bRpiopKclgyi8UAAAADkIV/P+6dOkSQmjYsOGqVav2PT5t2rT0v9XChQs/PbVr1668vLwQQq1atd5///0I89x0001f5//Z60Ko8OPHjx8/fvz48ePHj5+D9CeEMHXq1AgrWPZzC/3Hxo8fH0LYtm1b165dx40bV/VA++WXX969e/cQwlVXXfXss8/uO/Luu+/2799/5cqVIYTevXs3b948wjyNGjVqnJH0Jnx1IowCAABA3HIqKirizpBFxo4dO3LkyPQ6JyfnvPPO69y5c8uWLY888shRo0a9//77OTk5PXr0yMvLq1u37qpVq+bOnVtaWhpCaN68+cqVK1u2bBlr/Er5+fmFhYUTQhgadxIAAIAakhPC1KlTBwwYEHeQA8cz8J8wYsSIY445ZujQoR988EFFRcWCBQsWLFiw7wkVFRVz586dO3fuvgdPPvnkWbNmZUl7BwAA4KDkFvrq/v3f//3tt9++6667vvvd737pyfn5+Q899FBhYWHbtm0PQDYAAAAOWa7Af4ZGjRqNGjVq1KhRxcXFr732WlFR0aZNm3bs2LFz5846derUr1//6KOPPumkk/Ly8tq0aVNzMbZs2bJo0aIMBtN71++NOg8AAAAxUuC/SJs2bdq0aXPhhRfG8u3XXXfdE088kfH45771DgAAgARS4LPXFVdcUatWJs84LFiwoKSk5Lio8wAAABAjBT579enTp0+fPhkM5ufnl5SUNIk8EAAAAPFR4L+uXbt2bdmyJb1u3bp1vGEAAAA4WCnwX9fixYt/8IMfpNcVFRXxhgEAAOBgpcBnr5UrVz788MNlZWX7O1hcXBxC2FUDkQAAAIiLAp+9Ro0aNWfOnIzHX40wCgAAAHFT4L+url27Ll26tCb+5gkTJvTq1SuDwYKCguLi4k6RBwIAACA+CvzX1ahRo65du9bE39yuXbt27dplMDhp0qTi4uI6kQcCAAAgPpm8ZhwAAAA4wBR4AAAASAC30H+2DRs2rF69uqys7MQTT/z2t7992GGHfcHJb7755ocffhhC6NQpygfPp0yZMnHixAwGi4qKQgibIowCAABA3BT46pYuXfrzn//8+eefrzpywgkn/Nd//dePf/zjnJyczxy59tprlyxZEqJ+D/y8efNWrFiR8fj7EUYBAAAgbgr8J0yZMmXQoEHl5eX7Hly3bt3AgQOXLFnyhz/84YsvxUdr8uTJt9xySwaDAwYMKCoq6hh5IAAAAOKjwH9s2bJlVe29WbNmZ555ZosWLVauXPnCCy+EEB5++OFatWpNmjTpgOWpU6dOfn5+BoP16tWLPAwAAADxsondx4YNG5Zu79dcc81bb7315JNPPvDAA0uXLl24cGHTpk1DCA899NBTTz0Vd0wAAAAORa7AV0qlUunn2M8444z0xfaqj84999xFixZ16dJl165dP/nJT9auXdugQYMDk6qkpCSDqWqPAAAAAHAQUOArvfTSS+nFL37xi33be9rJJ588bty4oUOHvv/++xMmTLjjjjsOQKSf/exnme1Cn7Y2wigAAADETYGvtHnz5vSic+fOn3nCDTfc8Ic//OGNN9645557rr/++mbNmtV0pKZNmzZu3DiDwe3bt5eXl9eJPBAAAADx8Qx8pTp1Kgtv3bp1P/OE2rVr//rXvw4hfPjhh6NHjz4Ake64446tGTnllFNCCMcdgIgAAAAcKAp8pebNm6cXy5cv/7xzLrroou7du4cQHnjggS84DQAAACKnwFc67bTT0u94Hz9+/N69ez/znJycnIceeuiII47Yu3fvNddcU1paemAzAgAAcOjyDHylpk2bnn/++XPnzl2wYMG1117729/+9sgjj/z0ad/+9rfHjh07dOjQVatW9e7de+bMmQ0bNqyhSJs3b168eHEGg+m96z/7lxAAAAAkU05FRUXcGbLFa6+91rlz57KyshDCkUce2bNnzxNOOGHgwIEnnXTSvqeVl5dfeOGFc+fODSG0bt36hhtumDZt2qpVq0II0f5jXnrppbNmzcp4/Mch/DnCNAAAANkkJ4SpU6cOGDAg7iAHjivwHzv55JMfffTRgQMH7t69+8MPP5w5c2YI4Tvf+U61An/YYYf97W9/u/LKK5988smNGzfefvvtNZTnqquuql27dgaDCxYsKCkpaRt5IAAAAOKjwH/CZZddduKJJ/76179+7LHH9uzZ83mn5ebmTp8+fdy4cRMnTty0aVMNhbn00ksvvfTSDAbz8/NLSkoyeQEdAAAA2cot9J9t27Zt69evLy4u7tChw/HHH/95p+3evXvmzJkvvPDC+vXr169f//rrrx/IkJ8nPz+/sLBwQghD404CAABQQ9xCT6WGDRvm5eXl5eV98Wm5ubk//vGPf/zjHx+YVAAAAByyFPjstXLlyocffji9qd5+KS4uDiHsqoFIAAAAxEWB/xJ79+7dtGnThx9+uGPHjj179hx55JENGjRo0aJF+qXxNWrUqFFz5szJePzVCKMAAAAQNwX+M5SVlS1atGjmzJkvvfRSUVHRv/71r2on5ObmtmvX7owzzrjkkksuuOCCww+vkX/GCRMm9OrVK4PBgoKC4uLiTpEHAgAAID42sfuEioqKv/3tb7fccsvbb7/9FUeOP/74cePG9e3bt0aD7Reb2AEAAAc9m9gd0ioqKoYNG/brX/9634NHH31006ZNmzZt2qRJkxDC1q1bS0pKtm7d+s9//jP9u48333zzsssuGzZs2Lhx43JycuKJDgAAwMFOgf/Yn//856r2fsEFF/zoRz+6+OKLv/nNb37myZs3b3766aefeuqpv/71r3v27PnVr37Vrl27//iP/ziAeQEAADiEuIW+Unl5+bHHHptKpXJzc2fMmHHxxRd/xcHXXnutZ8+e77777je+8Y1UKlWnTp2oIv3xj38cN25cBrvQp1Kp3bt3Dw9hXFRRAAAAsoxb6A9dL7zwQiqVCiGMGzfuq7f3EMLJJ588bdq0c889d8uWLYsWLfq3f/u3qCLNnz9/7dq1GY+/H1UOAAAAsoACX+mNN95ILy6//PL9nT3nnHNatGjx/vvvr1u3LsICP3ny5NGjR2cw2KtXr9WrV3eMKgcAAABZQIGvtHPnzvTiqKOO2t/ZnJychg0bvv/++zt27IgwUp06ddq2bZvBYG5uboQxAAAAyAa14g6QLao2q3vxxRf3d3bLli3r168PIbRq1SriWAAAABBCcAW+yjnnnFO7du09e/b8/Oc/X7x48ZFHHvkVB/fu3XvzzTfv2bMnJyfn+9//frSpSkpKMpgqLy+PNgYAAACxU+ArNWrU6D/+4z8mTZq0YsWK0047raCg4N/+7d/q16//BSMfffTRs88+O3r06CVLloQQ+vTp07p16wgj/exnP5s4cWLG45lvfwcAAED2UeA/Nnbs2EWLFq1du7aoqKhPnz65ubnnnXfeqaee2rRp0yZNmjRp0qRWrVpb/3+vvfbavHnztm/fnp499thjH3zwwWjztGzZsnHjxhkMbt++vby8vG60aQAAAIiV98B/wnvvvXf11VfPnz9/v6a+//3vP/bYY82bN6+hVPsrPz+/sLBwQghD404CAABQQw7B98DbxO4TWrZsOXfu3NmzZ1966aV1637JNey6deteeOGF//M//7Nw4cLsae8AAAAclNxCX11OTs5FF1100UUX7dixY9WqVatXr3777bc//PDDHTt2VFRU1K9fv0GDBt/61rfat2+fl5dXr169uPMCAABwSFDgP1f9+vW/973vfe9734srwObNmxcvXpzBYHrv+r0RxwEAACBOCnz2Gjx48KxZszIeXxlhFAAAAOKmwGcivU1C7969e/fuXXPfctVVV9WuXTuDwQULFpSUlLSNPBAAAADxUeAzMW3atBDC8ccfX6MF/tJLL7300kszGMzPzy8pKcnkBXQAAABkK7vQAwAAQAK4Al/p3XffffXVV/dr5M0333z66af3PdKzZ89IQwEAAEAlBb7SwoULBw4cuF8j06ZNS99LX6WioiLCSP/4xz+mTJmSwWBxcXEIYWeEUQAAAIibAl8pNzc37gjVjR07ds6cORmPr4owCgAAAHFT4Cv17dv33nvvve222/bs2RNCOOmkk3r16vV5J//qV78KIZx55plnnXVWzUWaMGHCF2T4AgUFBcXFxZ0iDwQAAEB8cqK96zvpli9f3r9///Xr14cQrr322vvvv79evXqfPi0nJyeEcMcdd9x5550HOOFXkZ+fX1hYOCGEoXEnAQAAqCE5IUydOjX9ku9DhF3oP+HUU08tLCzs169fCOHhhx8+7bTTVq1yKzoAAADxU+Cra9iw4WOPPTZp0qS6deuuWbPmtNNOe+ihh9ynAAAAQLw8A/8ZcnJyBg8e3LVr1/79+xcVFQ0ZMmT+/Pn//d//3ahRowMZ449//OO4cePKysr2dzCVSoUQNtVAJAAAAOKiwH+ujh07Ll++/MYbb/zjH/84c+bM5cuX/+Uvf+natesBCzB//vy1a9dmPP5+hFEAAACImwL/RerXrz958uTu3btff/3177zzTrdu3caOHfuf//mfB+bbJ0+ePHr06AwGe/XqtXr16o6RBwIAACA+CvyXGzhwYJcuXfr37//KK6/cdtttCxYsODDfW6dOnbZt22YwmIXvtAcAAOBrsondV9K+ffsXXnjh+uuvDyHMmzcv7jgAAAAcclyB/6rq1q37wAMPdO/e/dprr922bduB+dKSkpIMpsrLyyNPAgAAQLwU+P3Tt2/fCy64oLS0NIRw1FFH1eh3/exnP5s4cWLG45lvfwcAAED2UeD3W8OGDRs2bHgAvqhly5aNGzfOYHD79u3l5eV1Iw8EAABAfBT47HX77bfffvvtGQzm5+cXFha2iTwQAAAA8bGJHQAAACSAAg8AAAAJ4Bb67LV58+bFixdnMJjeu35vxHEAAACIkwKfvQYPHjxr1qyMx1dGGAUAAIC4KfDZa8iQIbVr185gcMGCBSUlJcdHHggAAID4KPDZq2fPnj179sxgMD8/v6Sk5EC86Q4AAIADxSZ2AAAAkAAKPAAAACSAW+iz13PPPTd16tQMBouLi0MIH0adBwAAgBgp8Nnr7rvvnj17dsbjr0cYBQAAgLgp8NnrN7/5zUUXXZTBYEFBQXFxcafIAwEAABAfBT57nXDCCSeccEIGg5MmTSouLs7kBXQAAABkK5vYAQAAQAIo8AAAAJAAbqHPXg899NBvfvObsrKy/R1MpVIhhPdrIBIAAABxUeCz15IlS9auXZvx+KYIowAAABA3BT57TZ48efTo0RkM9urVa/Xq1R0jDwQAAEB8FPjsVadOnbZt22YwmJubG3kYAAAA4mUTOwAAAEgAV+CzWnFxcQab2O3evbsmwgAAABAjBT573XTTTb/73e8yHs98+zsAAACyjwKfvVq1apXZM/CpVGr37t11Iw8EAABAfBT47DV8+PDhw4dnMJifn19YWNgm8kAAAADExyZ2AAAAkAAKPAAAACSAW+iz1+bNmxcvXpzBYElJSQhhb8RxAAAAiJMCn70GDx48a9asjMdXRhgFAACAuCnw2WvIkCG1a9fOYHDBggUlJSXHRx4IAACA+Cjw2atnz549e/bMYDA/P7+kpKRh5IEAAACIj03sAAAAIAEUeAAAAEgAt9Bnr+eee27q1KkZDBYXF4cQPow6DwAAADFS4LPX3XffPXv27IzHX48wCgAAAHFT4DMxYMCAEELv3r179+5dc99y3333XXTRRRkMFhQUFBcXd4o8EAAAAPFR4DMxbdq0EMLxxx9fowW+bdu2gwcPzmBw0qRJxcXFmbyADgAAgGxlEzsAAABIAFfgK7377ruvvvrqfo28+eabTz/99L5HMnttOwAAAHwpBb7SwoULBw4cuF8j06ZNS99LX6WioiLCSA8++OA999yTwWAqlQohvB9hFAAAAOKmwFfKzc2NO0J1zz333Pr16zMe3xRhFAAAAOKmwFfq27fvvffee9ttt+3ZsyeEcNJJJ/Xq1evzTv7Vr34VQjjzzDPPOuusmos0efLk0aNHZzDYq1ev1atXd4w8EAAAAPFR4Cvl5OTcfPPNZ511Vv/+/devX//666+feeaZ999/f7169T59crrAn3/++XfeeWfNRapTp07btm0zGMzCuwkAAAD4muxC/wmnnnpqYWFhv379QggPP/zwaaedtmrVqrhDAQAAgCvwn9KwYcPHHnvsvPPO+3//7/+tWbPmtNNOu//++3/yk5/k5OQc+DDFxcVlZWX7O7V79+6aCAMAAECMFPjPkJOTM3jw4K5du/bv37+oqGjIkCHz58//7//+70aNGh3IGDfddNPvfve7jMfXRhgFAACAuCnwn6tjx47Lly+/8cYb//jHP86cOXP58uV/+ctfunbtesACtGrVKrNn4FOp1O7du+tGHggAAID4KPBfpH79+pMnT+7evfv111//zjvvdOvWbezYsf/5n/95YL59+PDhw4cPz2AwPz+/sLCwTeSBAAAAiI9N7L7cwIEDV6xYccopp5SVld12220/+MEP4k4EAADAIUeB/0rat2//wgsvXH/99SGEefPmxR0HAACAQ45b6L+qunXrPvDAA927d7/22mu3bdt2AL5x8+bNs2fPzmAX+i1btoQQ9tZAJAAAAOKiwO+fvn37XnDBBaWl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" width="672" /></p>
-<pre><code>##    user  system elapsed 
-##   0.136   0.012   0.496</code></pre>
-<p>Now, let’s try to compute the correlation between users. Since <code>userId</code> is in rows, we just have to normalize the rows and matrix multiply <span class="math inline">\(M * M^T\)</span>.</p>
-<pre class="r"><code># Figure out how to normalize the data first
+                destfile = &quot;/home/scidb/Project/ml-latest-small.zip&quot;)
+  unzip(&quot;/home/scidb/Project/ml-latest-small.zip&quot;)
+  
+  # System command to strip header (first line) from data file ratings.csv
+  system(sprintf(&quot;tail -n +2 %s/ratings.csv &gt; %s/ratings_noHeader.csv&quot;, data.dir, data.dir))
+}
+rm(data.dir)
 
-system.time(corr &lt;- iquery(&quot;spgemm(ratings_matrix, transpose(ratings_matrix));&quot;, 
-                           return = T))</code></pre>
-<pre><code>##    user  system elapsed 
-##   0.384   0.020   1.666</code></pre>
-<pre class="r"><code>head(corr)</code></pre>
-<pre><code>##   userId userId2 multiply
-## 1      1       1   145.00
-## 2      1       4    57.00
-## 3      1       5     8.00
-## 4      1       7    34.00
-## 5      1       9     4.00
-## 6      1      15    85.75</code></pre>
+## Get the full dataset
+data.dir &lt;- &quot;/home/scidb/Project/ml-20m&quot;
+if (!dir.exists(data.dir)) {
+  download.file(&quot;http://files.grouplens.org/datasets/movielens/ml-20m.zip&quot;, 
+                destfile = &quot;/home/scidb/Project/ml-20m.zip&quot;)
+  unzip(&quot;/home/scidb/Project/ml-20m.zip&quot;)
+  
+  system(sprintf(&quot;tail -n +2 %s/ratings.csv &gt; %s/ratings_noHeader.csv&quot;, data.dir, data.dir))
+}
+rm(data.dir)</code></pre>
 </div>
+<div id="load-data-into-scidb" class="section level2">
+<h2>Load Data into SciDB</h2>
+<p>Next, we load the data into the SciDB database. Because the data array is a 2D array (i.e. a matrix), whereas the data is provided as a flat array (i.e. 1D array), loading the data has two steps. We explain the steps for the small dataset.</p>
+<ol style="list-style-type: decimal">
+<li>First, load the CSV file as a 1D array, named <code>ratings</code>. This is done by first creating the array, and then using the <code>load</code> function to read in the CSV file.</li>
+</ol>
+<pre class="r"><code>iquery(dbConnect, &quot;CREATE ARRAY ratings &lt;userId:int64, movieID:int64, rating:double NOT NULL, timestamp:int64&gt; [i=0:?,1000000,0]&quot;)
+# Note 1: It's important to make rating column NOT NULL, to enable the use of spgemm later on.
+# Note 2: The 0:? allows us to create the array without knowing the size of the input file.
+# Note 3: The chunk size is 1000000 and overlap is 0
+
+iquery(dbConnect, &quot;load(ratings, '/home/scidb/Project/ml-latest-small/ratings_noHeader.csv', -2, 'csv')&quot;)</code></pre>
+<ol start="2" style="list-style-type: decimal">
+<li><p>The second step is to <em>redimension</em> the <code>ratings</code> array from a 1D to 2D array. The columns <code>userId</code> and <code>movieID</code> in the 1D array will become the dimensions of the 2D array.</p>
+<p>Additionally, to be able to use subsequent functions, we need to specify the size of each dimension.</p></li>
+</ol>
+<pre class="r"><code>(u_max &lt;- iquery(dbConnect, &quot;aggregate(ratings, max(userId))&quot;, return = T))
+(m_max &lt;- iquery(dbConnect, &quot;aggregate(ratings, max(movieID))&quot;, return = T))</code></pre>
+<pre><code>The userIds range from 1 to 671. The movieIDs range from 1 to 163949. Now, we redimension `ratings` array so that userId is the first dimension (rows) and movieID is the second dimension (columns).</code></pre>
+<pre class="r"><code>iquery(dbConnect, 
+       &quot;store(redimension(ratings, &lt;rating:double NOT NULL&gt;[userId=0:671,?,0,movieID=0:163949,?,0]), ratings_matrix)&quot;)
+# Note: We start the indices from 0, not 1, to enable the use of spgemm later on.</code></pre>
+<pre><code>The `store` function stores the resulting array into a new array named `ratings_matrix`.</code></pre>
+<p>Note that even though <code>ratings_matrix</code> is a huge matrix (671 x 163949), it is very sparse.</p>
+<pre class="r"><code>(n_ratings &lt;- iquery(dbConnect, &quot;aggregate(ratings, count(*))&quot;, return = T))</code></pre>
+<p>There are 100004 ratings available. All other entries of the matrix are zero, and not explicitly stored in the database. (In fact, according to the MovieLens data description, only 9000 movies are rated by the 700 users.)</p>
+<p>Below is the corresponding code for loading the full dataset into SciDB. The names of the data arrays are <code>RATINGS</code> and <code>RATINGS_MATRIX</code>.</p>
+<pre class="r"><code>iquery(dbConnect, &quot;CREATE ARRAY RATINGS &lt;userId:int64, movieID:int64, rating:double NOT NULL, timestamp:int64&gt; [i=0:?,1000000,0]&quot;)
+
+iquery(dbConnect, &quot;load(RATINGS, '/home/scidb/Project/ml-20m/ratings_noHeader.csv', -2, 'csv')&quot;)
+
+U_max &lt;- iquery(dbConnect, &quot;aggregate(RATINGS, max(userId))&quot;, return = T)$userId_max
+M_max &lt;- iquery(dbConnect, &quot;aggregate(RATINGS, max(movieID))&quot;, return = T)$movieID_max
+
+query &lt;- sprintf(&quot;redimension(RATINGS, &lt;rating:double NOT NULL&gt;[userId=0:%d,?,0,movieID=0:%d,?,0])&quot;,
+                 U_max, M_max)
+iquery(dbConnect, sprintf(&quot;store(%s, RATINGS_MATRIX)&quot;, query)</code></pre>
+</div>
+</div>
+<div id="clustering-users-in-the-small-dataset" class="section level1">
+<h1>Clustering Users in the Small Dataset</h1>
+<p>Using the small dataset, we’ll cluster users in 2 ways:</p>
+<ol style="list-style-type: decimal">
+<li>Compute pairwise correlation (over movieIDs) between users. Apply hierarchical clustering on the correlation matrix.</li>
+<li>Compute the SVD of the ratings matrix and keep the top 10 singular values. Apply kmeans clustering on the top 10 singular component coefficients.</li>
+</ol>
+<p>The correlation matrix and SVD will be computed using SciDB functionality, while kmeans and hierarchical clustering will be computed using base R functionality.</p>
+<div id="clustering-using-the-correlation-matrix" class="section level2">
+<h2>Clustering using the correlation matrix</h2>
+<p>Now, let’s try to compute the correlation between users. Since <code>userId</code> is in rows, we just have to normalize the rows and matrix multiply <span class="math inline">\(M * M^T\)</span>.</p>
+<p>The SciDB function for sparse matix multiply is <code>spgemm</code>, in the <code>linear_algebra</code> library.</p>
+<pre class="r"><code>iquery(dbConnect, &quot;load_library('linear_algebra')&quot;)</code></pre>
+<pre class="r"><code>iquery(dbConnect, &quot;store(spgemm(ratings_matrix, transpose(ratings_matrix)), ratings_matrix_MxMT)&quot;)</code></pre>
+<pre class="r"><code>ratings_matrix_MxMT_10 &lt;- iquery(dbConnect, &quot;subarray(ratings_matrix_MxMT, 0, 0, 9, 9)&quot;, return = T)
+(Matrix::spMatrix(nrow = 10, ncol = 10, 
+                  i = ratings_matrix_MxMT_10$userId, 
+                  j = ratings_matrix_MxMT_10$userId2,
+                  x = ratings_matrix_MxMT_10$multiply))</code></pre>
+<pre><code>## 10 x 10 sparse Matrix of class &quot;dgTMatrix&quot;
+##                                                                  
+##  [1,] 145   .     .      57    8.00   .      34.0    .      4.0 .
+##  [2,]   . 985.0 101.50  237  128.50   .     225.0  151.00  92.0 .
+##  [3,]   . 101.5 677.00  135  155.75  36.50  135.5  276.25  90.5 .
+##  [4,]  57 237.0 135.00 4039  328.00 117.00  684.0  516.00  50.0 .
+##  [5,]   8 128.5 155.75  328 1560.50  58.25  127.5  278.25  88.5 .
+##  [6,]   .   .    36.50  117   58.25 534.25    .    126.25  13.0 .
+##  [7,]  34 225.0 135.50  684  127.50   .    1133.0  214.00  52.0 .
+##  [8,]   . 151.0 276.25  516  278.25 126.25  214.0 1806.75 173.0 .
+##  [9,]   4  92.0  90.50   50   88.50  13.00   52.0  173.00 669.0 .
+## [10,]   .   .     .       .    .      .       .      .      .   .</code></pre>
+<div id="hierarchical-clustering" class="section level3">
+<h3>Hierarchical clustering</h3>
+<pre class="r"><code>ratings_matrix_MxMT &lt;- iquery(dbConnect, &quot;subarray(ratings_matrix_MxMT, null, null, null, null)&quot;, return = T)
+
+library(Matrix, quietly = T)
+correlationMatrix &lt;- spMatrix(nrow = 671, ncol = 671, 
+                              i = ratings_matrix_MxMT$userId, 
+                              j = ratings_matrix_MxMT$userId2,
+                              x = ratings_matrix_MxMT$multiply)
+
+# hc &lt;- hclust(as.dist(correlationMatrix))</code></pre>
+</div>
+</div>
+<div id="clustering-using-principle-component-analysis-and-the-svd" class="section level2">
+<h2>Clustering using Principle Component Analysis and the SVD</h2>
+<p>Next, we perform the SVD on the ratings matrix to obtain the top 10 princple components of the ratings data.</p>
+<p>SciDB provides the <code>gesvd</code> function in the <code>dense_linear_algebra</code> library, for computing the SVD of a dense matrix. To use this function, first load the library.</p>
+<pre class="r"><code>iquery(dbConnect, &quot;load_library('dense_linear_algebra')&quot;)</code></pre>
+<p>Next, we center the data at 0, a requirement of the PCA.</p>
+<pre class="r"><code>query_userAvg &lt;- &quot;aggregate(ratings_matrix, avg(rating), userId)&quot;
+query_crossjoin &lt;- sprintf(&quot;cross_join(ratings_matrix as A, %s as B, A.userId, B.userId)&quot;,
+                           query_userAvg)
+query_center &lt;- sprintf(&quot;project(apply(%s, rating_centered, rating - rating_avg), rating_centered)&quot;,
+                           query_crossjoin)
+
+ratings_matrix_normalized &lt;- iquery(dbConnect, 
+                                    sprintf(&quot;store(%s, ratings_matrix_centered)&quot;, query_center),
+                                    return = T)</code></pre>
+<p>Now, we are ready to compute the singular values of the ratings matrix.</p>
+<p><strong>Charlie to run this chunk</strong></p>
+<pre class="r"><code>iquery(dbConnect, &quot;store(gesvd(ratings_matrix, 'S'), ratings_singularValues)&quot;)</code></pre>
+<p>By inspecting the plot of the singular values, we see that the 10 singular values capture a large amount of the variation in the data.</p>
+<pre class="r"><code># ratings_singularValues &lt;- iquery(dbConnect, &quot;subarray(ratings_singularValues, null, null)&quot;, return = T)
+# plot(ratings_singularValues)</code></pre>
+<p>We also need the left and right singular values. We’ll get SciDB to compute and store the singular values, and then extract only the first 10 singular values into R.</p>
+<p><strong>Charlie to run this chunk</strong></p>
+<pre class="r"><code>iquery(dbConnect, &quot;store(gesvd(ratings_matrix, 'U'), ratings_U)&quot;)
+iquery(dbConnect, &quot;store(gesvd(ratings_matrix, 'VT'), ratings_VT)&quot;)</code></pre>
+<pre class="r"><code># ratings_U10&lt;- iquery(dbConnect, &quot;subarray(ratings_U, null, 0, null, 9)&quot;, return = T)
+# ratings_VT10&lt;- iquery(dbConnect, &quot;subarray(ratings_VT, null, 0, null, 9)&quot;, return = T)</code></pre>
+<div id="kmeans-clustering" class="section level3">
+<h3>kmeans clustering</h3>
+</div>
+</div>
+<div id="visualize-ratings-as-image" class="section level2">
+<h2>Visualize ratings as image</h2>
+<p>We can try to visualize the matrix using the <code>image</code> function provided in <code>vm_functions.R</code>.</p>
+<pre class="r"><code># source(&quot;~/vm_functions.R&quot;)
+
+# ratings_matrix &lt;- scidb(&quot;ratings_matrix&quot;)
+# system.time(image(ratings_matrix, grid = c(100,10)))</code></pre>
+</div>
+</div>
+<div id="big-data-computations-with-the-full-dataset" class="section level1">
+<h1>Big Data Computations with the Full Dataset</h1>
+<p>The computations in the previous section extend to using the full dataset. However, due to limited RAM and hard disk space on our laptops, we are unable to run the identical computations for the full dataset.</p>
+<p>We can still show a tractable example: finding the pairwise correlations between movies.</p>
+<pre class="r"><code>system.time(
+  iquery(dbConnect, 
+         &quot;store(spgemm(transpose(RATINGS_MATRIX), RATINGS_MATRIX), RATINGS_MATRIX_MxMT)&quot;)
+)</code></pre>
 </div>
 
 
