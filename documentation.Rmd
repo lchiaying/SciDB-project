@@ -20,8 +20,6 @@ The `scidb` R package is available on [CRAN](https://cran.r-project.org/package=
 The virtual machine has R and RStudio server already set up with `scidb` R package installed. (Note the pre-installed version of `scidb` is not the latest version.)
 
 
-![This is a figure](..../.png)
-
 ## Start the database
 
 ```
@@ -71,7 +69,7 @@ There are 2 datasets provided,
 
 ## Download data
 
-```{r download_small_dataset}
+```{r download_data}
 # Get the small dataset
 data.dir <- "/home/scidb/Project/ml-latest-small"
 if (!dir.exists(data.dir)) {
@@ -101,23 +99,19 @@ rm(data.dir)
 
 ## Load Data into SciDB
 
-```{r}
-existingArray = iquery(db = dbConnect, "list('arrays')", return = T)
+```{r load_small_dataset, eval = F, cache = T}
+existingArray = iquery(dbConnect, "list('arrays')", return = T)
 if("ratings" %in% existingArray$name) iquery(dbConnect, "remove(ratings)")
 
 iquery(dbConnect, "CREATE ARRAY ratings <userId:int64, movieID:int64, rating:double NOT NULL, timestamp:int64> [i=0:?,1000000,0]")
 # Note: It's important to make rating column NOT NULL, to enable the use of spgemm later on.
-```
 
-```{r}
 iquery(dbConnect, "load(ratings, '/home/scidb/Project/ml-latest-small/ratings_noHeader.csv', -2, 'csv')")
 ```
 
-```{r}
-(m_min <- iquery(dbConnect, "aggregate(ratings, min(movieID))", return = T))
-(m_max <- iquery(dbConnect, "aggregate(ratings, max(movieID))", return = T))
 
-(u_min <- iquery(dbConnect, "aggregate(ratings, min(userId))", return = T))
+```{r}
+(m_max <- iquery(dbConnect, "aggregate(ratings, max(movieID))", return = T))
 (u_max <- iquery(dbConnect, "aggregate(ratings, max(userId))", return = T))
 
 (n_ratings <- iquery(dbConnect, "aggregate(ratings, count(*))", return = T))
@@ -134,7 +128,24 @@ if("ratings_matrix" %in% existingArray$name) iquery(dbConnect, "remove(ratings_m
 iquery(dbConnect, "store(redimension(ratings, <rating:double NOT NULL>[userId=0:671,?,0,movieID=0:163949,?,0]), ratings_matrix)")
 ```
 
-### Plot image
+Below is the corresponding code for loading the full dataset into SciDB.
+
+```{r load_full_dataset, eval = F, cache=T}
+iquery(dbConnect, "CREATE ARRAY RATINGS <userId:int64, movieID:int64, rating:double NOT NULL, timestamp:int64> [i=0:?,1000000,0]")
+
+iquery(dbConnect, "load(RATINGS, '/home/scidb/Project/ml-20m/ratings_noHeader.csv', -2, 'csv')")
+
+m_max <- iquery(dbConnect, "aggregate(RATINGS, max(movieID))", return = T)$movieID_max
+u_max <- iquery(dbConnect, "aggregate(RATINGS, max(userId))", return = T)$userId_max
+
+query <- sprintf("store(redimension(RATINGS, <rating:double NOT NULL>[userId=0:%d,?,0,movieID=0:%d,?,0]), RATINGS_MATRIX)",
+                 u_max, m_max)
+iquery(dbConnect, query)
+```
+
+# Doing Fun Stuff with the Data
+
+## Visualize ratings as image
 
 We can try to visualize the matrix using the `image` function provided in `vm_functions.R`.
 
@@ -145,32 +156,61 @@ ratings_matrix <- scidb("ratings_matrix")
 system.time(image(ratings_matrix, grid = c(100,10)))
 ```
 
-### Compute correlation
+## Compute correlation
 Now, let's try to compute the correlation between users. Since `userId` is in rows, we just have to normalize the rows and matrix multiply $M * M^T$.
 
-```{r}
-# Figure out how to normalize the data first
+The SciDB function for sparse matix multiply is `spgemm`, in the `linear_algebra` library.
 
+```{r load_linear_algebra_library}
 iquery(dbConnect, "load_library('linear_algebra')")
-
-system.time(corr <- iquery(dbConnect, 
-                           "spgemm(ratings_matrix, transpose(ratings_matrix))", 
-                           return = T))
-
-head(corr)
 ```
 
 
+```{r spgemm_small_data, eval=F}
+ratings_matrix_MxMT <- iquery(
+  dbConnect, 
+  "store(spgemm(ratings_matrix, transpose(ratings_matrix)), ratings_matrix_MxMT)", 
+  return = T)
 
-### SVD
+head(ratings_matrix_MxMT)
+```
+
+
+```{r spgemm_full_data, eval=F}
+system.time(
+  iquery(dbConnect, 
+         "store(spgemm(RATINGS_MATRIX, transpose(RATINGS_MATRIX)), RATINGS_MATRIX_MxMT)")
+)
+```
+
+
+## SVD
 
 ```{r}
 iquery(dbConnect, "load_library('dense_linear_algebra')")
 ```
 
-```{r cache = T}
-ratings_singularValues <- iquery(dbConnect, "store(gesvd(ratings_matrix, 'S'), ratings_singularValues)", return = T)
+```{r normalize_small_data, eval = F}
+query_userAvg <- "aggregate(ratings_matrix, avg(rating), userId)"
+query_crossjoin <- sprintf("cross_join(ratings_matrix as A, %s as B, A.userId, B.userId)",
+                           query_userAvg)
+query_center <- sprintf("project(apply(%s, rating_centered, rating - rating_avg), rating_centered)",
+                           query_crossjoin)
+
+ratings_matrix_normalized <- iquery(dbConnect, 
+                                    sprintf("store(%s, ratings_matrix_centered)", query_center),
+                                    return = T)
 ```
+
+
+```{r gesvd_small_data, eval = F, cache = T}
+ratings_singularValues <- iquery(dbConnect, 
+                                 "store(gesvd(ratings_matrix, 'S'), ratings_singularValues)", 
+                                 return = T)
+```
+
+
+
 ```{r}
 plot(ratings_singularValues)
 ```
