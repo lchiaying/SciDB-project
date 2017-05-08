@@ -285,7 +285,7 @@ plot(hc)
 
 ## Clustering using Principle Component Analysis and the SVD
 
-Next, we perform the SVD on the ratings matrix to obtain the top 10 princple components of the ratings data.
+Next, we perform the SVD on the ratings matrix to obtain the top princple components of the ratings data.
 
 SciDB provides the `gesvd` function in the `dense_linear_algebra` library, for computing the SVD of a dense matrix. To use this function, first load the library.
 
@@ -296,62 +296,95 @@ iquery(dbConnect, "load_library('dense_linear_algebra')")
 Next, we center the data at 0, a requirement of the PCA. 
 
 ```{r center_small_data, eval = F}
-query_userAvg <- "aggregate(ratings_matrix, avg(rating), userId)"
-query_crossjoin <- sprintf("cross_join(ratings_matrix as A, %s as B, A.userId, B.userId)",
-                           query_userAvg)
-query_center <- sprintf("project(apply(%s, rating_centered, rating - rating_avg), rating_centered)",
-                           query_crossjoin)
+query_userSum <- "aggregate(ratings_matrix, sum(rating), movieID)"
+query_crossjoin <- sprintf("cross_join(ratings_matrix as A, %s as B, A.movieID, B.movieID)", 
+                           query_userSum)
+query_center <- sprintf("project(apply(%s, rating_centered, rating-rating_sum/671.0), rating_centered)", 
+                        query_crossjoin)
 
-ratings_matrix_normalized <- iquery(dbConnect, 
-                                    sprintf("store(%s, ratings_matrix_centered)", query_center),
-                                    return = T)
+ratings_matrix_centered <- iquery(dbConnect, 
+                                  sprintf("store(%s, ratings_matrix_centered)", query_center), 
+                                  return = T)
 ```
 
 Now, we are ready to compute the singular values of the ratings matrix.
 
-**Charlie to run this chunk**
 
 ```{r gesvd_small_data, eval = F, cache = T}
-iquery(dbConnect, "store(gesvd(ratings_matrix, 'S'), ratings_singularValues)")
+ratings_singularValues <- iquery(dbConnect, 
+                                 "store(gesvd(ratings_matrix_centered, 'S'), ratings_singularValues)", 
+                                 return = T)
+save(ratings_singularValues, file="/home/scidb/Project/ratings_singularValues.Rdata")
 ```
 
-By inspecting the plot of the singular values, we see that the 10 singular values capture a large amount of the variation in the data.
+By inspecting the plot of the singular values, we see that the top 3 singular values capture the most variation in the data.
 
 ```{r plot_singularValues, eval = T, cache = T}
-# ratings_singularValues <- iquery(dbConnect, "subarray(ratings_singularValues, null, null)", return = T)
-# plot(ratings_singularValues)
+load("/home/scidb/Project/ratings_singularValues.Rdata")
+
+## For logistical reasons, we have saved the SVD results as Rdata format. 
+## Equivalently, the singular values can be retrieved from the SciDB database
+## using the following command:
+# ratings_singularValues <- iquery(dbConnect, "filter(ratings_singularValues, TRUE)", return = T)
+
+plot(ratings_singularValues)
 ```
 
 
-We also need the left and right singular values. We'll get SciDB to compute and store the singular values, and then extract only the first 10 singular values into R.
+We also need the left and right singular vectors. We'll get SciDB to compute and store the singular vectors, and then extract only the first 10 singular vectors into R.
 
-**Charlie to run this chunk**
 ```{r gesvd_U_VT_small_data, eval = F, cache = T}
-iquery(dbConnect, "store(gesvd(ratings_matrix, 'U'), ratings_U)")
-iquery(dbConnect, "store(gesvd(ratings_matrix, 'VT'), ratings_VT)")
+ratingsSvdU <- iquery(dbConnect, "store(gesvd(ratings_matrix_centered, 'U'), ratingsSvdU)", return = T)
+ratingsSvdU[[1]]=as.integer(ratingsSvdU[[1]])
+ratingsSvdU[[2]]=as.integer(ratingsSvdU[[2]])
+save(ratingsSvdU,file="/home/scidb/Project/ratingsSvdU.Rdata")
+
+ratingsSvdVt <- iquery(dbConnect, "store(gesvd(ratings_matrix_centered, 'VT'), ratingsSvdVt)", return = T)
+save(ratingsSvdVt,file="/home/scidb/Project/ratingsSvdVt.Rdata")
 ```
 
 
-```{r gesvd_U_VT_get10_small_data, cache = T}
-# ratings_U10<- iquery(dbConnect, "subarray(ratings_U, null, 0, null, 9)", return = T)
-# ratings_VT10<- iquery(dbConnect, "subarray(ratings_VT, null, 0, null, 9)", return = T)
+```{r gesvd_UxSdiag_small_data, eval = F}
+query <- "apply(apply(ratings_singularValues, i_2, i_1-1), j, i_2)"  # Please check if i or i_1 is the dimension name, and whether it starts at 0 or 1?
+query <- sprintf("redimension(%s, <sigma:double>[i_2=0:671,?,0,j=0:671,?,0])", query) 
+iquery(dbConnect, sprintf("store(%s, ratingsSvdSdiag)", query))
+iquery(dbConnect, "store(spgemm(ratingsSvdU, ratingsSvdSdiag), ratingsSvdUxS)")
 ```
+
+
+```{r PCcoords, cache = T}
+load("/home/scidb/Project/ratingsSvdU.Rdata")
+
+uMat <- spMatrix(nrow = 672, ncol = 672, 
+                 i = ratingsSvdU$userId + 1, 
+                 j = ratingsSvdU$i + 1, 
+                 x = ratingsSvdU$u)
+sigMat <- Diagonal(x = ratings_singularValues$sigma)
+# The +1 is due to difference in 0-indexing in SciDB and 1-indexing in R
+
+PCcoords <- uMat * sigMat
+
+# ratings_U10 <- iquery(dbConnect, "subarray(ratings_U, null, 0, null, 4)", return = T)
+# ratings_VT10 <- iquery(dbConnect, "subarray(ratings_VT, null, 0, null, 4)", return = T)
+
+```
+
+```{r}
+plot(PCcoords[, 1], PCcoords[, 2])
+plot(PCcoords[, 2], PCcoords[, 3])
+plot(PCcoords[, 2], PCcoords[, 4])
+plot(PCcoords[, 4], PCcoords[, 5])
+```
+
 
 ### kmeans clustering
 
-
-
-## Visualize ratings as image
-
-We can try to visualize the matrix using the `image` function provided in `vm_functions.R`.
-
 ```{r}
-# source("~/vm_functions.R")
-
-# ratings_matrix <- scidb("ratings_matrix")
-# system.time(image(ratings_matrix, grid = c(100,10)))
+d <- dist(PCcoords[, 1:100])
+heatmap(as.matrix(d), symm = T)
+hclustTree <- hclust(d)
+plot(hclustTree)
 ```
-
 
 
 # Big Data Computations with the Full Dataset
