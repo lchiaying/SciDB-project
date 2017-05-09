@@ -48,7 +48,7 @@ dbConnect <- scidbconnect()
 
 The datasets in the SciDB database can be listed using the following command.
 
-```{r}
+```{r list_arrays, cache = T}
 (existingArray <- iquery(db = dbConnect, query = "list('arrays')", return = T))
 ```
 
@@ -140,7 +140,7 @@ iquery(dbConnect, "load(ratings, '/home/scidb/Project/ml-latest-small/ratings_no
     
     Additionally, to be able to use subsequent functions, we need to specify the size of each dimension.
     
-```{r find_size_small_dataset, eval = F}
+```{r find_size_small_dataset, eval = T, cache = T}
 print(u_max <- iquery(dbConnect, "aggregate(ratings, max(userId))", return = T))
 print(m_max <- iquery(dbConnect, "aggregate(ratings, max(movieID))", return = T))
 ```
@@ -148,8 +148,7 @@ print(m_max <- iquery(dbConnect, "aggregate(ratings, max(movieID))", return = T)
     The userIds range from 1 to 671. The movieIDs range from 1 to 163949. Now, we redimension `ratings` array so that userId is the first dimension (rows) and movieID is the second dimension (columns).
     
 ```{r redimension_small_dataset, eval = F, cache = T}
-iquery(dbConnect, 
-       "store(redimension(ratings, <rating:double NOT NULL>[userId=0:671,?,0,movieID=0:163949,?,0]), ratings_matrix)")
+iquery(dbConnect, "store(redimension(ratings, <rating:double NOT NULL>[userId=0:671,?,0,movieID=0:163949,?,0]), ratings_matrix)")
 # Note: We start the indices from 0, not 1, to enable the use of spgemm later on.
 ```
     
@@ -157,7 +156,7 @@ iquery(dbConnect,
     
 Note that even though `ratings_matrix` is a huge matrix (671 x 163949), it is very sparse.
     
-```{r count_small_dataset, eval = F, cache = T}
+```{r count_small_dataset, eval = T, cache = T}
 print(n_ratings <- iquery(dbConnect, "aggregate(ratings, count(*))", return = T))
 ```
 
@@ -314,8 +313,7 @@ Now, we are ready to compute the singular values of the ratings matrix.
 
 ```{r gesvd_small_data, eval = F, cache = T}
 ratings_singularValues <- iquery(dbConnect, 
-                                 "store(gesvd(ratings_matrix_centered, 'S'), ratings_singularValues)", 
-                                 return = T)
+                                 "store(gesvd(ratings_matrix_centered, 'S'), ratings_singularValues)")
 save(ratings_singularValues, file="/home/scidb/Project/ratings_singularValues.Rdata")
 ```
 
@@ -333,60 +331,56 @@ plot(ratings_singularValues)
 ```
 
 
-We also need the left and right singular vectors. We'll get SciDB to compute and store the singular vectors, and then extract only the first 10 singular vectors into R.
+We also need the singular vectors. We'll get SciDB to compute and store the singular vectors, and then extract only the first 3 singular vectors into R for inspection.
 
-```{r gesvd_U_VT_small_data, eval = F, cache = T}
-ratingsSvdU <- iquery(dbConnect, "store(gesvd(ratings_matrix_centered, 'U'), ratingsSvdU)", return = T)
-ratingsSvdU[[1]]=as.integer(ratingsSvdU[[1]])
-ratingsSvdU[[2]]=as.integer(ratingsSvdU[[2]])
-save(ratingsSvdU,file="/home/scidb/Project/ratingsSvdU.Rdata")
-
-ratingsSvdVt <- iquery(dbConnect, "store(gesvd(ratings_matrix_centered, 'VT'), ratingsSvdVt)", return = T)
-save(ratingsSvdVt,file="/home/scidb/Project/ratingsSvdVt.Rdata")
+```{r gesvd_U_small_data, eval = F, cache = T}
+iquery(dbConnect, "store(gesvd(ratings_matrix_centered, 'U'), ratingsSvdU)")
 ```
 
 
+
 ```{r gesvd_UxSdiag_small_data, eval = F}
-query <- "apply(apply(ratings_singularValues, i_2, i_1-1), j, i_2)"  # Please check if i or i_1 is the dimension name, and whether it starts at 0 or 1?
-query <- sprintf("redimension(%s, <sigma:double NOT NULL>[i_2=0:671,?,0,j=0:671,?,0])", query) 
-iquery(dbConnect, sprintf("store(%s, ratingsSvdSdiag)", query))
+iquery(dbConnect, "store(apply(ratings_singularValues, j, i), tmpDb)")
+iquery(dbConnect, "store(redimension(tmpDb, <sigma:double NOT NULL>[i=0:671,?,0,j=0:671,?,0]), ratingsSvdSdiag)")
+iquery(dbConnect, "remove(tmpDb)")
+
 iquery(dbConnect, "store(spgemm(ratingsSvdU, ratingsSvdSdiag), ratingsSvdUxS)")
+
+ratingsSvdUxSfirst3 <- iquery(dbConnect, "subarray(ratingsSvdUxS, 0, 0, 671, 2)", return = T)
+ratingsSvdUxSfirst3$userId <- as.integer(ratingsSvdUxSfirst3$userId)
+ratingsSvdUxSfirst3$j <- as.integer(ratingsSvdUxSfirst3$j)
+save(ratingsSvdUxSfirst3, file = "/home/scidb/Project/ratingsSvdUxSfirst3.Rdata")
 ```
 
 
 ```{r PCcoords, cache = T}
-load("/home/scidb/Project/ratingsSvdU.Rdata")
+load("/home/scidb/Project/ratingsSvdUxSfirst3.Rdata")
 
-uMat <- spMatrix(nrow = 672, ncol = 672, 
-                 i = ratingsSvdU$userId + 1, 
-                 j = ratingsSvdU$i + 1, 
-                 x = ratingsSvdU$u)
-sigMat <- Diagonal(x = c(0,ratings_singularValues$sigma))
+library(Matrix)
+PCcoords <- spMatrix(nrow = 671, ncol = 3, 
+                     i = ratingsSvdUxSfirst3$userId, 
+                     j = ratingsSvdUxSfirst3$j + 1, 
+                     x = ratingsSvdUxSfirst3$multiply)
 # The +1 is due to difference in 0-indexing in SciDB and 1-indexing in R
 
-PCcoords <- uMat * sigMat[1:(nrow(sigMat)-1), 1:(nrow(sigMat)-1)]
-
-# ratings_U10 <- iquery(dbConnect, "subarray(ratings_U, null, 0, null, 4)", return = T)
-# ratings_VT10 <- iquery(dbConnect, "subarray(ratings_VT, null, 0, null, 4)", return = T)
-
-```
-
-```{r}
-plot(PCcoords[, 1], PCcoords[, 2])
-plot(PCcoords[, 2], PCcoords[, 3])
-plot(PCcoords[, 2], PCcoords[, 4])
-plot(PCcoords[, 4], PCcoords[, 5])
+plot(as.data.frame(as.matrix(PCcoords)))
 ```
 
 
-### kmeans clustering
+### Hierarchical clustering using PCA
 
-```{r}
-d <- dist(PCcoords[, 1:100])
+```{r SVD_heatmap, cache=T}
+d <- dist(PCcoords)
 heatmap(as.matrix(d), symm = T)
+```
+
+
+```{r SVD_hc, cache=T}
 hclustTree <- hclust(d)
 plot(hclustTree)
 ```
+
+
 
 
 # Big Data Computations with the Full Dataset
