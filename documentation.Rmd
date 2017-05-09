@@ -2,11 +2,13 @@
 title: "SciDB"
 author: "Wusuo Liu and Chia Ying Lee"
 date: "5/3/2017"
-output: html_document
+output: word_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+library(scidb, quietly = T)
 ```
 
 
@@ -40,7 +42,7 @@ The `scidb` R package provides an interface to R, allowing interaction with the 
 
 First, load the library, and connect to the SciDB database. By default, it connects to the localhost.
 ```{r}
-library(scidb, quietly = T)
+library(scidb)
 dbConnect <- scidbconnect()
 ```
 
@@ -296,10 +298,10 @@ iquery(dbConnect, "load_library('dense_linear_algebra')")
 Next, we center the data at 0, a requirement of the PCA. 
 
 ```{r center_small_data, eval = F}
-query_userSum <- "aggregate(ratings_matrix, sum(rating), movieID)"
+query_userSum <- "aggregate(ratings_matrix, avg(rating), movieID)"
 query_crossjoin <- sprintf("cross_join(ratings_matrix as A, %s as B, A.movieID, B.movieID)", 
                            query_userSum)
-query_center <- sprintf("project(apply(%s, rating_centered, rating-rating_sum/671.0), rating_centered)", 
+query_center <- sprintf("project(apply(%s, rating_centered, rating-rating_avg), rating_centered)", 
                         query_crossjoin)
 
 ratings_matrix_centered <- iquery(dbConnect, 
@@ -346,7 +348,7 @@ save(ratingsSvdVt,file="/home/scidb/Project/ratingsSvdVt.Rdata")
 
 ```{r gesvd_UxSdiag_small_data, eval = F}
 query <- "apply(apply(ratings_singularValues, i_2, i_1-1), j, i_2)"  # Please check if i or i_1 is the dimension name, and whether it starts at 0 or 1?
-query <- sprintf("redimension(%s, <sigma:double>[i_2=0:671,?,0,j=0:671,?,0])", query) 
+query <- sprintf("redimension(%s, <sigma:double NOT NULL>[i_2=0:671,?,0,j=0:671,?,0])", query) 
 iquery(dbConnect, sprintf("store(%s, ratingsSvdSdiag)", query))
 iquery(dbConnect, "store(spgemm(ratingsSvdU, ratingsSvdSdiag), ratingsSvdUxS)")
 ```
@@ -359,10 +361,10 @@ uMat <- spMatrix(nrow = 672, ncol = 672,
                  i = ratingsSvdU$userId + 1, 
                  j = ratingsSvdU$i + 1, 
                  x = ratingsSvdU$u)
-sigMat <- Diagonal(x = ratings_singularValues$sigma)
+sigMat <- Diagonal(x = c(0,ratings_singularValues$sigma))
 # The +1 is due to difference in 0-indexing in SciDB and 1-indexing in R
 
-PCcoords <- uMat * sigMat
+PCcoords <- uMat * sigMat[1:(nrow(sigMat)-1), 1:(nrow(sigMat)-1)]
 
 # ratings_U10 <- iquery(dbConnect, "subarray(ratings_U, null, 0, null, 4)", return = T)
 # ratings_VT10 <- iquery(dbConnect, "subarray(ratings_VT, null, 0, null, 4)", return = T)
