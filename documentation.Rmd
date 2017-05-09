@@ -22,8 +22,17 @@ The `scidb` R package is available on [CRAN](https://cran.r-project.org/package=
 
 
 ## SciDB Data Structures and Query Languages
+SciDB is a computational database management system that employs the array data model. In SciDB, dataset is organized as a multi-dimensional array. A user creates a SciDB array by specifying dimensions and attributes of the array. 
 
-**Charlie: Add explanation of data structures**
+An n-dimensional SciDB array has dimensions $d_1$, $d_2$, ..., $d_n$. The size of the dimension is the number of ordered values in that dimension. For example, a 2-dimensional array may have dimensions $i$ and $j$, each with values (1, 2, 3, ..., 10) and (1, 2, ..., 30) respectively.
+
+Each combination of dimension values identifies a cell or element of the array, which can hold multiple data values called attributes ($a_1$, $a_2$, ..., $a_m$). Each data value is referred to as an attribute, and belongs to one of the supported datatypes in SciDB.
+
+![A one-dimensinoal SciDB array holding 3 attributes each element](./SciDB-project/blob/master/documentation_files/figure-docx/firstPlot.png)
+
+![A two-dimensinoal SciDB array holding 1 nullable attributes each element](./SciDB-project/blob/master/documentation_files/figure-docx/firstPlot.png)
+
+SciDB is inherently adapted to data where the elements are sitting on regular grid of one or more dimensions, such as image, geo-spatial data. Due to its matrix-like organization of data, SciDB also has good advantage in linear algebra and statistical analysis. Several system libraries for that purpose are provided in SciDB.
 
 ## AQL and AFL
 
@@ -65,9 +74,122 @@ However, note that the SciDB installation has problems with MPI, preventing the 
 
 ### Method 2: Install from scratch
 
-We installed the SciDB from scratch.
+We install SciDB Community Edition 15.12 on a blank Ubuntu 14.04. SciDB Community Edition installation guide and reference manual is [here](https://paradigm4.atlassian.net/wiki/display/ESD/SciDB+Community+Edition+Installation+Guide)
 
-**Charlie: add installation instructions**
+The community edition does not have all the functionalities of SciDB. For example, the community edition does not have the truncated singular value decomposition `tsvd` in its `dense_linear_algebra` library. Functions like `tsvd` are only available in SciDB's proprietary edition. Please check the function status before using it.
+
+SciDB requires access to the root user account on the Linux system. Ubuntu, by default, does not have a root account. Please type the following in the terminal:
+```
+sudo passwd root
+```
+and set up the root password.
+
+The following instructions are meant for SciDB installation on one computing node acting as both the host and client, assuming the username is `scidb` and the hosting website is `127.0.0.1`. The instructions are similar to the official installation guide with several important extra steps.
+
+#### Download SciDB Community Edition 
+To download SciDB CE, do the following:
+
+[Access the 15.12 CE page](https://drive.google.com/folderview?id=0B7yt0n33Us0rT1FJdmxFV2g0OHc&&usp=drive_web) and download the 15.12 source code tarball. Please do not just try the VM there.
+```
+cd /home; tar –xvzf scidb-15.12.1.4cadab5.tar.gz
+```
+Create a directory under the /home called scidbtrunk and install the tarball there to match the installation instructions.
+
+#### Installing Expect, and SSH Packages
+```
+sudo apt-get -y install expect openssh-server openssh-client
+```
+#### Starting the SSH Server
+Check whether ssh is running:
+```
+sudo service ssh status 
+```
+If ssh is not running, start the ssh server as follows:
+```
+sudo /usr/sbin/update-rc.d ssh defaults
+sudo service ssh start
+```
+If ssh is running, restart ssh server as follows:
+```
+sudo service ssh restart
+```
+#### Providing Passwordless SSH
+SciDB requires passwordless ssh on all servers logging in on each server as:
+
+1. the `scidb` user, for starting and stopping SciDB.
+2. the `root` user, for initializing SciDB on each server.
+
+```
+cd ~
+ssh-keygen # DO NOT enter a passphrase; accept the default.
+
+# Since in this case, the machine acts both the host and the client, in /home/.ssh directory, make a copy of id_rsa.pub, rename it as authorized_keys. Copy authorized_keys to /root/.ssh directory. If necessary, copy authorized_keys to all the other users on the computing cluster put in their /.ssh directories.
+
+chmod 755 ~
+chmod 755 ~/.ssh
+cd /home/scidbtrunk
+deployment/deploy.sh access root 127.0.0.1 <hostIP1>
+deployment/deploy.sh access scidb 127.0.0.1 <hostIP1>
+```
+In the deploy access commands, for a single host, omit `<hostIP1>`. With more than two hosts, list all of them. This rule applies to all subsequent commands using `<hostIP1>`.
+To confirm that as user `scidb` on `127.0.0.1`, you can ssh to all hosts without providing a password, run the following:
+```
+ssh 127.0.0.1 date
+ssh <hostIP1> date
+```
+If you get error “Agent admitted failure to sign using the key”, search “Startup Applications Preferences” in Ubuntu, and uncheck “SSH key Agent”.
+
+#### Installing a Single Node SciDB Instance 
+SciDB implementation involves:
+
+1. Configuring the Environment
+2. Building SciDB
+3. Installing SciDB
+
+Perform the following tasks to install a single node instance of SciDB Community Edition.
+
+#### Configuring Environment Variables
+To configure your environment variables, add the following lines to your local shell configuration script (.bashrc), then source it:
+```
+export SCIDB_VER=15.12 
+export SCIDB_INSTALL_PATH=home/scidbtrunk/stage/install
+export SCIDB_BUILD_TYPE=Debug
+export PATH=$SCIDB_INSTALL_PATH/bin:$PATH
+```
+For single node installations, do not point `SCIDB_INSTALL_PATH` at `/opt/scidb/$SCIDB_VER`. Doing so results in the deletion of all content in `SCIDB_INSTALL_PATH` (including useful packages in `/opt/scidb/$SCIDB_VER`) on installation.
+
+Setting the `SCIDB_BUILD_TYPE` environmental variable is optional. It is used in `run.py` setup and `run.py plugin_setup`. The default value is Debug. For performance measurement, use RelWithDebInfo. See `run.py setup -h`.
+
+Setting the `PATH` environmental variable is optional, but it is helpful to find utilities such as iquery.
+
+#### Activating and Verifying the New .bashrc File
+After saving the .bashrc file, source it, echo the environment variables, and verify the response is per the
+previous settings as follows:
+```
+source .bashrc
+echo $SCIDB_VER
+echo $SCIDB_INSTALL_PATH
+echo $PATH
+```
+
+#### Building SciDB CE
+In this step, please allocate as much memory as possible to your VM. 4GB memory as the upper limit will not have the source code built successfully. This step is very memory and time consuming. Allocating more processing cores and invoking parallel compiling would be helpful. To build SciDB, run the following:
+```
+cd home/scidbtrunk
+./run.py -h # to learn its usage.
+./run.py setup # to configure build directories and cmake infrastructure
+./run.py make -j4 # to build the sources.
+```
+In the `make` sub-command, use `-j4` to speedup build with 4 threads.
+
+#### Install shim
+The installation manual is [here](https://github.com/Paradigm4/shim). Refer to the section `LD_LIBRARY_PATH issues` if the following error occurs:
+```
+error while loading shared libraries: libscidbclient.so: cannot open shared object file: No such file or directory
+```
+
+#### Install R, Rstudio and R package `scidb`
+Do not install the CRAN package “scidb”. Instead, install the package from github `devtools::install_github("Paradigm4/SciDBR")`
 
 
 
