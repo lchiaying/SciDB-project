@@ -30,7 +30,7 @@ Each combination of dimension values identifies a cell or element of the array, 
 
 ![A one-dimensinoal SciDB array holding 3 attributes each element](./firstPlot.png)
 
-![A two-dimensinoal SciDB array holding 1 nullable attributes each element](./firstPlot.png)
+![A two-dimensinoal SciDB array holding 1 nullable attributes each element](./secondPlot.png)
 
 SciDB is inherently adapted to data where the elements are sitting on regular grid of one or more dimensions, such as image, geo-spatial data. Due to its matrix-like organization of data, SciDB also has good advantage in linear algebra and statistical analysis. Several system libraries for that purpose are provided in SciDB.
 
@@ -202,14 +202,22 @@ $ scidb.py startall mydb
 
 # The Big Data Problem
 
-We use the movie ratings data from [MovieLens](https://grouplens.org/datasets/movielens/).
+We demonstrate the capabilities of SciDB on a big data problem: clustering analysis of movie ratings data from [MovieLens](https://grouplens.org/datasets/movielens/).
 
 There are 2 datasets provided, 
 
-- Full data set
-- Small data set 
+- The full data set contains 27,000 movies rated by 138,000 users, with 20 million ratings.
+- A small subset of the data contains about 9,000 movies rated by 671 users, with 100,004 ratings.
 
-**Chia: add explanation of data, describe clustering goal**
+Each dataset is provided as a 4-column CSV file with the userID, movieID, rating, and timestamp.
+
+
+The goal of this project is to perform a clustering analysis to cluster the users based on which movies they liked. The ratings is essentially a matrix, with userID for rows and movieID for columns. Due to the size of the data, the ratings matrix is huge but sparse, which means that performing matrix operations on the ratings matrix becomes a challenge. SciDB is designed precisely for such mathematical operations, and this is the meat of our demo. Specifically, for the purpose of our clustering analysis, we demo 
+
+- sparse matrix multiplication
+- singular value decomposition
+
+on the movie ratings matrix.
 
 
 ## Download data
@@ -304,17 +312,17 @@ iquery(dbConnect, sprintf("store(%s, RATINGS_MATRIX)", query)
 
 We show some essential statistical methods using SciDB functions.
 
-What is the average rating of each user?
+What is the average rating given by each user?
 
 ```{r}
 userAvg <- iquery(dbConnect, "aggregate(ratings_matrix, avg(rating), userId)", return = T)
 head(userAvg)
 ```
 
-Similarly, we can obtain the the average average rating of each movie.
+Similarly, we can obtain the highest rating received by each movie.
 
 ```{r}
-movieAvg <- iquery(dbConnect, "aggregate(ratings_matrix, avg(rating), movieID)", return = T)
+movieAvg <- iquery(dbConnect, "aggregate(ratings_matrix, max(rating), movieID)", return = T)
 head(movieAvg)
 ```
 
@@ -328,13 +336,17 @@ Other aggregation functions include `sum`, `min`, `max`, `stdev`, etc.
 Using the small dataset, we'll cluster users in 2 ways:
 
 1. Compute pairwise correlation (over movieIDs) between users. Apply hierarchical clustering on the correlation matrix.
-1. Compute the SVD of the ratings matrix and keep the top 10 singular values. Apply kmeans clustering on the top 10 singular component coefficients.
+1. Compute the SVD of the ratings matrix and keep the top 10 singular values. Apply hierarchical clustering on the top singular component coefficients.
 
-The correlation matrix and SVD will be computed using SciDB functionality, while kmeans and hierarchical clustering will be computed using base R functionality.
+The correlation matrix and SVD will be computed using SciDB functionality, while hierarchical clustering and visualizations will be performed in R.
 
 ## Clustering using the correlation matrix
 
-Now, let's try to compute the correlation between users. Since `userId` is in rows, we just have to normalize the rows and matrix multiply $M * M^T$.
+Now, let's to compute the correlation between users, which is $M*M^T$, where $M$ is the row-normalized ratings matrix. In practice, because normalization changes the ratings matrix from sparse to dense, what's usually done is to 
+
+1. sparse matrix multiply the unnormalized ratings matrix
+1. account for the normalization by subtracting and dividing, element-wise, the corresponding products of means and standard deviations
+
 
 The SciDB function for sparse matix multiply is `spgemm`, in the `linear_algebra` library.
 
@@ -346,6 +358,8 @@ iquery(dbConnect, "load_library('linear_algebra')")
 ```{r spgemm_small_data, eval=F}
 iquery(dbConnect, "store(spgemm(ratings_matrix, transpose(ratings_matrix)), ratings_matrix_MxMT)")
 ```
+
+The next code chunk accounts for the normalization.
 
 ```{r convert2correlationMatrix_small_data, eval = F}
 # Average user rating
@@ -377,7 +391,7 @@ iquery(dbConnect,
        sprintf("store(project(%s, correlation), ratings_correlationMatrix)", query))
 ```
 
-
+Finally, we import the correlation matrix into R, for clustering and visualization.
 ```{r retrieve_correlationMatrix, cache = T}
 correlationMatrix <- iquery(dbConnect, 
                             "filter(ratings_correlationMatrix, TRUE)", 
@@ -390,7 +404,7 @@ correlationMatrix <- spMatrix(nrow = 671, ncol = 671,
                               x = correlationMatrix$correlation)
 ```
 
-We visualize the correlation matrix using the `heatmap` function in R. (Actually, we'll visualize `1-correlationMatrix`, which is the dissimilarity matrix.) This function also automatically computes the dendrogram and reorders the rows and columns to produce a visual clustering of the userIds.
+We visualize the correlation matrix using the `heatmap` function in R. This function also automatically computes the dendrogram and reorders the rows and columns to produce a visual clustering of the userIds. (Actually, we'll visualize `1-correlationMatrix`, which is the dissimilarity matrix.)
 
 ```{r heatmap_correlationMatrix, cache = T}
 heatmap(as.matrix(1 - correlationMatrix), symm = T, xlab = "userId", ylab = "userId")
@@ -408,7 +422,7 @@ plot(hc)
 
 ## Clustering using Principle Component Analysis and the SVD
 
-Next, we perform the SVD on the ratings matrix to obtain the top princple components of the ratings data.
+In this clustering approach, we'll perform the SVD on the ratings matrix to obtain the top princple components of the ratings matrix. The SVD decomposed the ratings matrix into $M = U*S*V^T$.
 
 SciDB provides the `gesvd` function in the `dense_linear_algebra` library, for computing the SVD of a dense matrix. To use this function, first load the library.
 
@@ -439,7 +453,7 @@ ratings_singularValues <- iquery(dbConnect,
 save(ratings_singularValues, file="/home/scidb/Project/ratings_singularValues.Rdata")
 ```
 
-By inspecting the plot of the singular values, we see that the top 3 singular values capture the most variation in the data.
+By inspecting the plot of the singular values, we see that the top 3 singular values capture a large amount of variation in the data.
 
 ```{r plot_singularValues, eval = T, cache = T}
 load("/home/scidb/Project/ratings_singularValues.Rdata")
@@ -453,13 +467,13 @@ plot(ratings_singularValues)
 ```
 
 
-We also need the singular vectors. We'll get SciDB to compute and store the singular vectors, and then extract only the first 3 singular vectors into R for inspection.
+We also need the singular vectors. 
 
 ```{r gesvd_U_small_data, eval = F, cache = T}
 iquery(dbConnect, "store(gesvd(ratings_matrix_centered, 'U'), ratingsSvdU)")
 ```
 
-
+To obtain the principle component directions, we need to compute $U * S$, performed in SciDB as follows.
 
 ```{r gesvd_UxSdiag_small_data, eval = F}
 iquery(dbConnect, "store(apply(ratings_singularValues, j, i), tmpDb)")
@@ -467,14 +481,19 @@ iquery(dbConnect, "store(redimension(tmpDb, <sigma:double NOT NULL>[i=0:671,?,0,
 iquery(dbConnect, "remove(tmpDb)")
 
 iquery(dbConnect, "store(spgemm(ratingsSvdU, ratingsSvdSdiag), ratingsSvdUxS)")
+```
 
+We'll extract only the first 3 singular vectors into R for visualization
+
+
+```{r ratingsSvdUxSfirst3, eval = F}
 ratingsSvdUxSfirst3 <- iquery(dbConnect, "subarray(ratingsSvdUxS, 0, 0, 671, 2)", return = T)
 ratingsSvdUxSfirst3$userId <- as.integer(ratingsSvdUxSfirst3$userId)
 ratingsSvdUxSfirst3$j <- as.integer(ratingsSvdUxSfirst3$j)
 save(ratingsSvdUxSfirst3, file = "/home/scidb/Project/ratingsSvdUxSfirst3.Rdata")
 ```
 
-
+The first 3 PC coordinates are shown below.
 ```{r PCcoords, cache = T}
 load("/home/scidb/Project/ratingsSvdUxSfirst3.Rdata")
 
@@ -490,6 +509,8 @@ plot(as.data.frame(as.matrix(PCcoords)))
 
 
 ### Hierarchical clustering using PCA
+
+We'll use just the top 3 PC coordinates for clustering. This yields the following clustering results.
 
 ```{r SVD_heatmap, cache=T}
 d <- dist(PCcoords)
