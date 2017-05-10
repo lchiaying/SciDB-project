@@ -42,13 +42,15 @@ Finally, we demonstrate the linear algebra operations in SciDB in the context of
 
 Full documentation of SciDB is provided [here](https://paradigm4.atlassian.net/wiki/display/ESD/SciDB+Documentation).
 
-<!-- [Array Data Model](http://paradigm4.com/HTMLmanual/13.11/scidb_ug/ch01s02.html) -->
+SciDB is a computational database management system that employs the array data model. In SciDB, dataset is organized as a multi-dimensional array. The array data models are explained in [this manual](http://paradigm4.com/HTMLmanual/13.11/scidb_ug/ch01s02.html), as follows:
 
-SciDB is a computational database management system that employs the array data model. In SciDB, dataset is organized as a multi-dimensional array. A user creates a SciDB array by specifying dimensions and attributes of the array. 
+> "A user creates a SciDB array by specifying dimensions and attributes of the array. 
+>
+> An n-dimensional SciDB array has dimensions $d_1$, $d_2$, ..., $d_n$. The size of the dimension is the number of ordered values in that dimension. For example, a 2-dimensional array may have dimensions $i$ and $j$, each with values (1, 2, 3, ..., 10) and (1, 2, ..., 30) respectively.
+>
+> Each combination of dimension values identifies a cell or element of the array, which can hold multiple data values called attributes ($a_1$, $a_2$, ..., $a_m$). Each data value is referred to as an attribute, and belongs to one of the supported datatypes in SciDB.""
 
-An n-dimensional SciDB array has dimensions $d_1$, $d_2$, ..., $d_n$. The size of the dimension is the number of ordered values in that dimension. For example, a 2-dimensional array may have dimensions $i$ and $j$, each with values (1, 2, 3, ..., 10) and (1, 2, ..., 30) respectively.
 
-Each combination of dimension values identifies a cell or element of the array, which can hold multiple data values called attributes ($a_1$, $a_2$, ..., $a_m$). Each data value is referred to as an attribute, and belongs to one of the supported datatypes in SciDB.
 
 ![A one-dimensinoal SciDB array holding 3 attributes each element (Image from Poliakov, Brown. Using SciDB and SciDB-R. Paradigm4 2013)](./firstPlot.png)
 
