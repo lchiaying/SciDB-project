@@ -1,7 +1,6 @@
 ---
-title: "SciDB"
+title: "SciDB for Clustering Analysis of MovieLens Rating Data"
 author: "Wusuo Liu and Chia Ying Lee"
-date: "5/3/2017"
 output: word_document
 ---
 
@@ -11,30 +10,53 @@ knitr::opts_chunk$set(echo = TRUE)
 library(scidb, quietly = T)
 ```
 
+# Overview and Summary of Project
 
-# Introduction
+Many scientific applications, such as in genomics and finance, involve performing complex linear algebraic operations, such as matrix multiplication and singular value decomposition, on massive amounts of data, often on the order of terabytes. These mathematical operations scale poorly, typically $O(n^3)$ for many linear algebraic operations, and therefore pose a significant challenge.
 
-**Chia: add brief intro**
+SciDB is a database with efficient data management and distributed architecture, designed specifically for fast mathematical and statistical operations on a massive scale. This project demonstrates the capabilities of SciDB for mathematical and statistical operations for big data, with applications to clustering analysis of movie ratings data.
+
+Our big data application is to use [MovieLens](https://movielens.org/) ratings data to cluster users based on which similar movies they liked. We perform two clustering methods, in order to demonstrate two key linear algebra operations of SciDB:
+
+1. Cluster using correlation: demonstrates sparse matrix multiply
+1. Cluster using Principle Component Analysis: demonstrates SVD
+
+We also use the `scidb` R package, which provides an interface between the database and R,  allowing import of data into R for visualization.
+
+In this report, we will first describe the basic data structures and query languages of SciDB, and its installation.
+Then we shown how to download and load the data into SciDB, and illustrate some basic statistical operations (e.g. avg, max).
+Finally, we demonstrate the linear algebra operations in SciDB in the context of clustering analysis.
+
+
+
+### Youtube URLs
+
+- 2 min video:
+- 15 min video:
+
+
+
+# Introduction to SciDB
+
+## SciDB Data Structures and Query Languages
 
 Full documentation of SciDB is provided [here](https://paradigm4.atlassian.net/wiki/display/ESD/SciDB+Documentation).
 
-The `scidb` R package is available on [CRAN](https://cran.r-project.org/package=scidb), along with [documentation](https://cran.r-project.org/web/packages/scidb/vignettes/scidb.pdf).
+<!-- [Array Data Model](http://paradigm4.com/HTMLmanual/13.11/scidb_ug/ch01s02.html) -->
 
-
-## SciDB Data Structures and Query Languages
 SciDB is a computational database management system that employs the array data model. In SciDB, dataset is organized as a multi-dimensional array. A user creates a SciDB array by specifying dimensions and attributes of the array. 
 
 An n-dimensional SciDB array has dimensions $d_1$, $d_2$, ..., $d_n$. The size of the dimension is the number of ordered values in that dimension. For example, a 2-dimensional array may have dimensions $i$ and $j$, each with values (1, 2, 3, ..., 10) and (1, 2, ..., 30) respectively.
 
 Each combination of dimension values identifies a cell or element of the array, which can hold multiple data values called attributes ($a_1$, $a_2$, ..., $a_m$). Each data value is referred to as an attribute, and belongs to one of the supported datatypes in SciDB.
 
-![A one-dimensinoal SciDB array holding 3 attributes each element](./firstPlot.png)
+![A one-dimensinoal SciDB array holding 3 attributes each element (Image from Poliakov, Brown. Using SciDB and SciDB-R. Paradigm4 2013)](./firstPlot.png)
 
-![A two-dimensinoal SciDB array holding 1 nullable attributes each element](./secondPlot.png)
+![A two-dimensinoal SciDB array holding 1 nullable attributes each element (Image from Poliakov, Brown. Using SciDB and SciDB-R. Paradigm4 2013)](./secondPlot.png)
 
 SciDB is inherently adapted to data where the elements are sitting on regular grid of one or more dimensions, such as image, geo-spatial data. Due to its matrix-like organization of data, SciDB also has good advantage in linear algebra and statistical analysis. Several system libraries for that purpose are provided in SciDB.
 
-## AQL and AFL
+### AQL and AFL
 
 SciDB provides query languages AQL, for querying the database, and AFL, for performing function calls on database objects. They are accessed from the unix terminal.
 
@@ -43,25 +65,30 @@ $ iquery
 AQL% set lang AFL;
 AFL%
 ```
-## `scidb` R package
 
-The `scidb` R package provides an interface to R, allowing interaction with the database from R, primarily using the `iquery` function.
 
-## Basics of SciDB R package
+### The `scidb` R package
 
-First, load the library, and connect to the SciDB database. By default, it connects to the localhost.
+The `scidb` R package provides an interface to R, allowing interaction with the database from R, primarily using the `iquery` function. It can be installed from github `devtools::install_github("Paradigm4/SciDBR")`
+
+To use the `scidb` package, first load the library, and connect to the SciDB database. 
+
 ```{r}
 library(scidb)
 dbConnect <- scidbconnect()
 ```
 
-The datasets in the SciDB database can be listed using the following command.
+The datasets in the SciDB database can be listed using the following command. It also illustrates the basic usage of the `iquery` function: it is told the database to connect to, and the query to run. Setting `return = T` will return the scidb arrary to an R data frame. By default, `return = F`, meaning that the query is performed in the SciDB database, but no output is returned to R.
+
 
 ```{r list_arrays, cache = T}
 (existingArray <- iquery(db = dbConnect, query = "list('arrays')", return = T))
 ```
 
-The above expression illustrates the basic usage of the `iquery` function: it is told the database to connect to, and the query to run. Setting `return = T` will return the scidb arrary to an R data frame, which we have called `existingArray`. By default, `return = F`, meaning that the query is performed in the SciDB database, but no output is returned to R.
+
+At the time of executing the query, we have 2 arrays stored in SciDB, `RATNGS` and `RATINGS_MATRIX`. From the schema, we see that `RATINGS` is a 1D array in `i` with 4 attributes `userId, movieID, rating, timestamp`, whereas `RATINGS_MATRIX` is a 2D array in `userId, movieID` with 1 attribute `rating`.
+
+
 
 ## Installation
 
@@ -218,6 +245,8 @@ The goal of this project is to perform a clustering analysis to cluster the user
 - singular value decomposition
 
 on the movie ratings matrix.
+
+Note: Due to limited disk and RAM of our laptops, we will work mainly with the small dataset, for demo purposes. In practice, SciDB boasts to be able to handle terabytes of data.
 
 
 ## Download data
@@ -507,6 +536,8 @@ PCcoords <- spMatrix(nrow = 671, ncol = 3,
 plot(as.data.frame(as.matrix(PCcoords)))
 ```
 
+Note: SciDB has a paid Enterprise Edition with added functionality, such as truncated SVD. In most applications, only the top few singular values are required, so truncated SVD is more efficient than computing the entire SVD. However, we do not have access to that function in the SciDB Community Edition.
+
 
 ### Hierarchical clustering using PCA
 
@@ -526,17 +557,4 @@ plot(hclustTree)
 
 
 
-# Big Data Computations with the Full Dataset
-
-The computations in the previous section extend to using the full dataset. However, due to limited RAM and hard disk space on our laptops, we are unable to run the identical computations for the full dataset.
-
-We can still show a tractable example: finding the pairwise correlations between movies.
-
-
-```{r spgemm_full_data, eval=F}
-system.time(
-  iquery(dbConnect, 
-         "store(spgemm(transpose(RATINGS_MATRIX), RATINGS_MATRIX), RATINGS_MATRIX_MxMT)")
-)
-```
 
